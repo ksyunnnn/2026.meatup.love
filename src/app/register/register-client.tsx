@@ -26,11 +26,11 @@ export default function RegisterClient() {
           <input value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
         <label style={{ display: 'grid', gap: 4 }}>
-          職業（任意）
+          何してるひと？（任意）
           <input value={job} onChange={(e) => setJob(e.target.value)} />
         </label>
         <label style={{ display: 'grid', gap: 4 }}>
-          性別（任意）
+          どっち？（任意）
           <input value={gender} onChange={(e) => setGender(e.target.value)} />
         </label>
         <button type="submit" style={{ padding: '8px 16px' }}>

@@ -29,10 +29,23 @@ export default function RegisterClient() {
           何してるひと？（任意）
           <input value={job} onChange={(e) => setJob(e.target.value)} />
         </label>
-        <label style={{ display: 'grid', gap: 4 }}>
-          どっち？（任意）
-          <input value={gender} onChange={(e) => setGender(e.target.value)} />
-        </label>
+        <fieldset style={{ display: 'grid', gap: 4, border: 'none', padding: 0, margin: 0 }}>
+          <legend>どっち？（任意）</legend>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {['男', '女', 'その他'].map((option) => (
+              <label key={option} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <input
+                  type="radio"
+                  name="gender"
+                  value={option}
+                  checked={gender === option}
+                  onChange={(e) => setGender(e.target.value)}
+                />
+                {option}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <button type="submit" style={{ padding: '8px 16px' }}>
           登録する（仮）→ チケットへ
         </button>

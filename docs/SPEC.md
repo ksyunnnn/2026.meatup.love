@@ -73,11 +73,14 @@
 - FR8 つながり項目 / FR9 招待枠（紹介ツリー）。
 - 実 Firebase プロジェクト作成と本番鍵差し込み（あなたのコンソール作業）。
 - `2019-summer` の API エラーハンドリング不足（別サイトの既知 TODO・参考）。
+- 認証 UX 改善（本番＆実機検証時に判断）：A=外部ブラウザ導線（採用方針）、B=Google One Tap/FedCM（戻りユーザー最小タップ・in-app での効きは要検証）、C=セッション永続化。OAuth 方式（popup→redirect＋authDomain=自ドメイン、または One Tap 追加）の最適化もここで。
 
 ## 決定ログ（確定事項）
 
 - URL 方式：**サブドメイン**（各回 `<id>.meatup.love`、apex は最新回 or 端境期メタサイト）。
 - バックエンド：**Firebase**（Supabase はスリープのため不採用）。
 - フロント：**Next.js 16**（公式手順準拠、Tailwind なし＝意図的差分）。
-- 認証：簡単な認証のみ（Google/GitHub/メール）。重い認可は持たない。
+- 認証：簡単な認証のみ。**Google 主役 / GitHub 任意 / メールリンクは保険（後回し）**。重い認可は持たない。
+- **事実（実機確認 2026-06）**：Google サインインは LINE・Instagram の in-app ブラウザで動作する。当初の「WebView は Google が一律拒否」は過度な一般化につき撤回。
+- **in-app ブラウザの UX 対策 = A（外部ブラウザで開く導線）を採用**：常用ブラウザの既存ログインに乗せて入力を削減（RFC 8252／LINE は `openExternalBrowser=1`）。今は OAuth は `signInWithPopup` を継続し、方式の最適化は本番ドメイン確定後の実機検証でまとめて判断。
 - チケットは現場非使用＝盛り上げ用。

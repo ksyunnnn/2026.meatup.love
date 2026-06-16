@@ -7,13 +7,28 @@ import { ImageResponse, loadGoogleFont } from 'workers-og'
 const W = 1200
 const H = 630
 
+// Firebase Auth UIDs are short alphanumeric strings. Reject anything else so a
+// crafted id (e.g. `%2F`-encoded slashes) can't escape the `shares/` path and
+// read another collection via the REST URL.
+const ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+
 function firestoreBase(env) {
   // Override to the emulator for local testing via .dev.vars.
   return env.FIRESTORE_BASE_URL || 'https://firestore.googleapis.com'
 }
 
+// Escape text inserted into the Satori HTML (a stray < or " breaks the render).
+function esc(s) {
+  return String(s)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
 export const onRequestGet = async ({ params, env }) => {
   const id = params.id
+  if (!ID_RE.test(id)) return new Response('Not found', { status: 404 })
   const project = env.FIREBASE_PROJECT_ID
   if (!project) return new Response('Server not configured', { status: 500 })
 
@@ -30,8 +45,8 @@ export const onRequestGet = async ({ params, env }) => {
       <div style="display:flex;flex-direction:column;width:100%;height:100%;background:#ffffff;border-radius:36px;padding:72px;justify-content:space-between">
         <div style="display:flex;font-size:48px;font-weight:700;color:#b33d44">meatup 2026</div>
         <div style="display:flex;flex-direction:column">
-          <div style="display:flex;font-size:96px;font-weight:700;color:#1d1411">${name} さん</div>
-          <div style="display:flex;font-size:40px;color:#6f615a;margin-top:18px">TICKET No. ${ticketNo}</div>
+          <div style="display:flex;font-size:96px;font-weight:700;color:#1d1411">${esc(name)} さん</div>
+          <div style="display:flex;font-size:40px;color:#6f615a;margin-top:18px">TICKET No. ${esc(ticketNo)}</div>
         </div>
         <div style="display:flex;font-size:34px;font-weight:700;color:#dc7c34">お肉でつながる、あの会。</div>
       </div>

@@ -3,6 +3,10 @@
 // link preview shows the personalized /og/{id} image. Humans are redirected
 // into the static app. Data comes from the public shares/{id} projection.
 
+// Firebase Auth UIDs are short alphanumeric strings. Reject anything else so a
+// crafted id can't escape the `shares/` path in the REST URL.
+const ID_RE = /^[A-Za-z0-9_-]{1,128}$/
+
 function firestoreBase(env) {
   return env.FIRESTORE_BASE_URL || 'https://firestore.googleapis.com'
 }
@@ -19,6 +23,7 @@ function esc(s) {
 
 export const onRequestGet = async ({ params, env, request }) => {
   const id = params.id
+  if (!ID_RE.test(id)) return new Response('Not found', { status: 404 })
   const project = env.FIREBASE_PROJECT_ID
   const origin = new URL(request.url).origin
 

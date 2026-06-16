@@ -31,17 +31,30 @@
 4. **Cloudflare Pages プロジェクト**（git 連携）
    - Build command: `npm run build`
    - Output directory: `out`
-   - 環境変数（**ビルド時に必要**：`NEXT_PUBLIC_*` はビルドで埋め込まれる）
-     - `NEXT_PUBLIC_FIREBASE_*`（6種・本番値）
-     - `NEXT_PUBLIC_USE_EMULATOR=false`
+   - `functions/`（OGP 共有/画像）は自動でデプロイされ、Cloudflare が `_routes.json` を
+     自動生成（`/t/*`・`/og/*` のみ関数、他は無料の静的配信）。
+   - 環境変数
+     - **ビルド時に必要**（`NEXT_PUBLIC_*` はビルドで埋め込まれる）
+       - `NEXT_PUBLIC_FIREBASE_*`（6種・本番値）
+       - `NEXT_PUBLIC_USE_EMULATOR=false`
+     - **関数の実行時に必要**（OGP がデータ取得に使う）
+       - `FIREBASE_PROJECT_ID`（本番プロジェクト ID）
 
 ## C. 動作確認（スモークテスト）
 
 1. `/admin` で招待リンク発行 → リンクを開く → Google でサインイン → 登録 → `/ticket` が「確定」。
 2. 招待なしで `/register`（飛び込み）→ `pending` → `/admin` で「確認しました！」→ `/ticket` 確定。
 3. 同じ招待リンクを2人目で開く → 単回使用で `pending` に落ちる。
+4. チケットの「シェア」→ `/t/{uid}` のプレビュー（Facebook/X のカードデバッガで検証）。
+   `/og/{uid}` が名前入り 1200×630 PNG を返すこと。
+
+### OGP のローカル確認（任意・参考）
+- `.dev.vars`（gitignore 済）に `FIREBASE_PROJECT_ID=demo-meatup` と
+  `FIRESTORE_BASE_URL=http://127.0.0.1:8080` を置く。
+- エミュレータ起動 → `npm run build` → `npx wrangler pages dev --port 8788`。
+- `curl localhost:8788/og/<uid>` で PNG、`/t/<uid>` で OG メタを確認。
 
 ## D. 後続（初回確認の後）
 
-- **個別チケット OGP**（必須・SPEC 後回し節参照）：共有ルートを Pages Function 化、`shares/{id}` 投影 or 署名 URL、Satori で画像生成。
-- in-app ブラウザの外部ブラウザ導線、メールリンク認証、デザイン／コピー。
+- in-app ブラウザの外部ブラウザ導線、メールリンク認証、コピー調整。
+- OGP の磨き込み（マスコット SVG、レイアウト調整、名前変更時の画像更新戦略）。

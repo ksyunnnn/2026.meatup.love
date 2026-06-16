@@ -74,10 +74,11 @@
 - コピー調整パス：細かい言い回し全般、2019 の砕けたトーン（例「はよ参加登録させてくれ」）の反映。
   文言は `src/content/copy.ts` 等に集約して一括編集できるようにする案。
 - デザイン／スタイリング（現状は素の最小スタイル、Tailwind なし）。
-- **個別チケット OGP（次の実装対象・必須）**：1人ずつ名前入り画像。共有ルートを Cloudflare
-  Pages Function にし、リクエスト時に OG メタ＋画像（Satori 系）を生成。閲覧者は未認証で見るため、
-  確定時に**公開用の最小投影 `shares/{id}`（name／ticketNo のみ・world-readable）** を作るか署名付き URL を使う
-  （プライバシー：name 公開の合意込み）。初回デプロイ＆動作確認の後に着手。
+- ~~**個別チケット OGP**~~ → **機構は実装済み（`style-and-ogp` ブランチ）**。Cloudflare Pages
+  Function（`functions/t/[id].js`＝OGメタ、`functions/og/[id].js`＝1200×630 PNG）を `workers-og`
+  で実装。日本語名はフォント部分集合で描画。公開投影 `shares/{uid}`（name／ticketNo のみ・world-read）
+  ＋ルールを追加。エミュレータ＋wrangler で生成を実機確認済み。本番 Firebase での最終確認は未。
+  デザイン詳細・出典は `docs/DESIGN.md`。
 - FR8 つながり項目 / FR9 招待枠（紹介ツリー）。
 - 実 Firebase プロジェクト作成と本番鍵差し込み（あなたのコンソール作業）。
 - `2019-summer` の API エラーハンドリング不足（別サイトの既知 TODO・参考）。

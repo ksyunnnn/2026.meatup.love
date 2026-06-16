@@ -1,0 +1,13 @@
+# Cloudflare Pages config. The static Next export (`out/`) is served as assets;
+# the `functions/` directory adds the per-ticket share + OG image routes.
+# Cloudflare auto-generates _routes.json from `functions/` (functions run only
+# on /t/* and /og/*; everything else is served as free static assets).
+name = "meatup-2026"
+pages_build_output_dir = "out"
+compatibility_date = "2024-11-01"
+
+# Production value is set in the Cloudflare Pages dashboard (Settings > Vars).
+# For local `wrangler pages dev`, override via .dev.vars (gitignored) to point
+# at the Firestore emulator.
+[vars]
+FIREBASE_PROJECT_ID = "demo-meatup"

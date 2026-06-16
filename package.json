@@ -13,7 +13,8 @@
     "firebase": "^12.14.0",
     "next": "16.2.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "workers-og": "^0.0.27"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -22,6 +23,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "firebase-tools": "^15.20.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.101.0"
   }
 }

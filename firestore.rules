@@ -1,0 +1,85 @@
+rules_version = '2';
+
+// ============================================================================
+// DRAFT — starting point, not final. Tracks the current design (see
+// docs/SPEC.md, which is itself an evolving roadmap). Known TODOs below.
+//
+// Model:
+//  - attendees/{uid} : one per guest. status integrity is enforced here so a
+//      guest can NEVER self-approve. "approved" at creation is allowed ONLY
+//      when a valid invite token is presented (host-issued). Otherwise the
+//      guest is created "pending" and a host confirms (UberEats-style).
+//  - invites/{token} : host-issued invite links. Created by admins now;
+//      later extendable to attendees holding an invite quota (FR9).
+//  - admins/{uid}    : presence == admin. Managed out-of-band (console/tooling).
+//
+// TODO (later cycles):
+//  - Marking an invite as used (usedBy) needs either a narrow rule letting the
+//    consumer set it once, or privileged tooling. Not handled yet.
+//  - ticketNo assignment/uniqueness strategy (random code vs counter).
+//  - Tighten field-level validation once the form fields are finalized.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // A valid, not-yet-consumed invite for the given edition.
+    function validInvite(token, edition) {
+      return token is string
+        && exists(/databases/$(database)/documents/invites/$(token))
+        && get(/databases/$(database)/documents/invites/$(token)).data.edition == edition
+        && !get(/databases/$(database)/documents/invites/$(token)).data.keys().hasAny(['usedBy']);
+    }
+
+    match /attendees/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+
+      // Self-create. status integrity enforced here.
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.edition is string
+        && request.resource.data.createdAt is timestamp
+        && (
+          // walk-in: must start pending
+          request.resource.data.status == 'pending'
+          // invited: may start approved ONLY with a valid invite token
+          || (request.resource.data.status == 'approved'
+              && validInvite(request.resource.data.inviteToken, request.resource.data.edition))
+        );
+
+      // Self-update: edit own profile fields, but NOT status or ticketNo.
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.ticketNo == resource.data.ticketNo;
+
+      // Host: approve/reject and assign ticketNo.
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    match /invites/{token} {
+      // Signed-in users may read to validate an invite at registration time.
+      allow read: if isSignedIn();
+      // DRAFT: only admins issue invites (FR9 future: attendees with quota).
+      allow create: if isAdmin()
+        && request.resource.data.issuedBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /admins/{uid} {
+      allow read: if isAdmin();
+      allow write: if false; // set via console / privileged tooling only
+    }
+  }
+}

@@ -78,7 +78,8 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      allow read: if isAdmin();
+      // A user may check their OWN admin status; admins may read any.
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow write: if false; // set via console / privileged tooling only
     }
   }

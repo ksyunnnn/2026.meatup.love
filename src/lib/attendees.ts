@@ -1,4 +1,14 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import {
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  serverTimestamp,
+} from 'firebase/firestore'
 import { db } from './firebase'
 import type { Attendee, AttendeeStatus } from './types'
 
@@ -57,4 +67,37 @@ export async function createAttendee(input: CreateAttendeeInput) {
 export async function getMyAttendee(uid: string): Promise<Attendee | null> {
   const snap = await getDoc(doc(db, 'attendees', uid))
   return snap.exists() ? (snap.data() as Attendee) : null
+}
+
+/** Attendee plus its document id (== auth uid). */
+export type AttendeeWithId = Attendee & { id: string }
+
+/**
+ * Guests awaiting host confirmation for this edition.
+ * Note: the edition + status filter needs a composite index in production
+ * Firestore (the emulator runs it without one).
+ */
+export async function listPendingAttendees(): Promise<AttendeeWithId[]> {
+  const q = query(
+    collection(db, 'attendees'),
+    where('edition', '==', EDITION),
+    where('status', '==', 'pending'),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Attendee) }))
+}
+
+/** Host confirmation: pending → approved (UberEats-style "確認しました"). */
+export async function approveAttendee(uid: string, adminUid: string) {
+  await updateDoc(doc(db, 'attendees', uid), {
+    status: 'approved' as AttendeeStatus,
+    approvedAt: serverTimestamp(),
+    approvedBy: adminUid,
+  })
+}
+
+/** Whether this uid is a host (presence of admins/{uid}). */
+export async function isAdmin(uid: string): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'admins', uid))
+  return snap.exists()
 }

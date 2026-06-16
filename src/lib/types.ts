@@ -9,7 +9,7 @@ export interface Attendee {
   job?: string // optional
   gender?: string // optional
   status: AttendeeStatus
-  ticketNo?: number // assigned when approved
+  ticketNo?: string // short code, e.g. "MU-2026-7Q3K"; issued at registration
   edition: string // e.g. "2026"
   invitedAs?: string // the name carried by the invite link, kept for the record
   inviteToken?: string // present when the guest arrived via a valid invite link

@@ -19,7 +19,7 @@ export default function RegisterClient() {
 
   return (
     <main style={{ padding: 24, fontFamily: 'system-ui', lineHeight: 1.8 }}>
-      <h1>参加登録</h1>
+      <h1>参加する</h1>
       <form onSubmit={handleSubmitStub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
         <label style={{ display: 'grid', gap: 4 }}>
           名前（編集可）
@@ -47,7 +47,7 @@ export default function RegisterClient() {
           </div>
         </fieldset>
         <button type="submit" style={{ padding: '8px 16px' }}>
-          登録する（仮）→ チケットへ
+          参加する（仮）→ チケットへ
         </button>
       </form>
       <p style={{ color: '#888', fontSize: 12 }}>

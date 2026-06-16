@@ -21,9 +21,9 @@ export default function InviteClient() {
   return (
     <main style={{ padding: 24, fontFamily: 'system-ui', lineHeight: 1.8 }}>
       <h1>ようこそ{name ? `、${name} さん` : ''} 🍖</h1>
-      <p>meatup 2026 への招待です。サインインして登録に進みます。</p>
+      <p>meatup 2026 への招待です。サインインして参加に進みます。</p>
       <button onClick={handleSignInStub} style={{ padding: '8px 16px' }}>
-        サインイン（仮）→ 登録へ
+        サインイン（仮）→ 参加へ
       </button>
       <p style={{ color: '#888', fontSize: 12 }}>
         ※ スタブ。実際の認証（Google / GitHub / メール）は後続サイクルで実装。

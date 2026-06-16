@@ -74,6 +74,12 @@ service cloud.firestore {
       // DRAFT: only admins issue invites (FR9 future: attendees with quota).
       allow create: if isAdmin()
         && request.resource.data.issuedBy == request.auth.uid;
+      // Consume once: a signed-in user may set usedBy to themselves on an
+      // unused invite, touching no other field. Enforces single-use.
+      allow update: if isSignedIn()
+        && !('usedBy' in resource.data)
+        && request.resource.data.usedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy']);
       allow update, delete: if isAdmin();
     }
 

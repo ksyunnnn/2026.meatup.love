@@ -42,7 +42,7 @@ export default function InviteClient() {
             GitHub でサインイン
           </button>
           <p style={{ color: '#888', fontSize: 12 }}>
-            ※ メールリンクは次の手順（B1.5）で追加予定。
+            ※ メールでのサインインは後日追加予定。
           </p>
         </div>
       )}

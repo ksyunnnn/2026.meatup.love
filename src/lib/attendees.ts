@@ -2,8 +2,8 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
+  runTransaction,
   collection,
   query,
   where,
@@ -24,14 +24,6 @@ export function generateTicketNo() {
   return `MU-${EDITION}-${code}`
 }
 
-// A valid, not-yet-consumed invite for this edition (mirrors firestore.rules).
-async function isValidInvite(token: string): Promise<boolean> {
-  const snap = await getDoc(doc(db, 'invites', token))
-  if (!snap.exists()) return false
-  const data = snap.data()
-  return data.edition === EDITION && !('usedBy' in data)
-}
-
 export interface CreateAttendeeInput {
   uid: string
   authName: string
@@ -41,27 +33,50 @@ export interface CreateAttendeeInput {
   inviteToken?: string
 }
 
+/**
+ * Register a guest.
+ * Invited (valid, unused token) → confirmed immediately AND the invite is
+ * consumed (usedBy = this uid); otherwise → pending (host confirms later).
+ * Runs in a transaction so a single invite link auto-confirms exactly one
+ * person: concurrent uses of the same token retry and fall back to pending.
+ */
 export async function createAttendee(input: CreateAttendeeInput) {
-  // Invited (valid token) → confirmed immediately; otherwise awaits host confirmation.
-  const approved = input.inviteToken ? await isValidInvite(input.inviteToken) : false
-  const status: AttendeeStatus = approved ? 'approved' : 'pending'
+  const ticketNo = generateTicketNo()
 
-  const data: Record<string, unknown> = {
-    authName: input.authName,
-    name: input.name,
-    status,
-    ticketNo: generateTicketNo(),
-    edition: EDITION,
-    createdAt: serverTimestamp(),
-  }
-  if (input.job) data.job = input.job
-  if (input.gender) data.gender = input.gender
-  if (input.inviteToken) {
-    data.inviteToken = input.inviteToken
-    data.invitedAs = input.name
-  }
+  await runTransaction(db, async (tx) => {
+    let approved = false
 
-  await setDoc(doc(db, 'attendees', input.uid), data)
+    if (input.inviteToken) {
+      const inviteRef = doc(db, 'invites', input.inviteToken)
+      const inviteSnap = await tx.get(inviteRef)
+      if (inviteSnap.exists()) {
+        const inv = inviteSnap.data()
+        if (inv.edition === EDITION && !('usedBy' in inv)) {
+          approved = true
+          tx.update(inviteRef, { usedBy: input.uid })
+        }
+      }
+    }
+
+    const status: AttendeeStatus = approved ? 'approved' : 'pending'
+    const data: Record<string, unknown> = {
+      authName: input.authName,
+      name: input.name,
+      status,
+      ticketNo,
+      edition: EDITION,
+      createdAt: serverTimestamp(),
+    }
+    if (input.job) data.job = input.job
+    if (input.gender) data.gender = input.gender
+    if (input.inviteToken) {
+      data.inviteToken = input.inviteToken
+      data.invitedAs = input.name
+    }
+    if (approved) data.approvedAt = serverTimestamp()
+
+    tx.set(doc(db, 'attendees', input.uid), data)
+  })
 }
 
 export async function getMyAttendee(uid: string): Promise<Attendee | null> {
@@ -72,17 +87,9 @@ export async function getMyAttendee(uid: string): Promise<Attendee | null> {
 /** Attendee plus its document id (== auth uid). */
 export type AttendeeWithId = Attendee & { id: string }
 
-/**
- * Guests awaiting host confirmation for this edition.
- * Note: the edition + status filter needs a composite index in production
- * Firestore (the emulator runs it without one).
- */
-export async function listPendingAttendees(): Promise<AttendeeWithId[]> {
-  const q = query(
-    collection(db, 'attendees'),
-    where('edition', '==', EDITION),
-    where('status', '==', 'pending'),
-  )
+/** All guests for this edition (admin view). Pending is derived client-side. */
+export async function listAttendees(): Promise<AttendeeWithId[]> {
+  const q = query(collection(db, 'attendees'), where('edition', '==', EDITION))
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Attendee) }))
 }

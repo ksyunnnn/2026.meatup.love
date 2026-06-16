@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { signInWithGoogle, signInWithGithub } from '@/lib/auth'
+import styles from './invite.module.css'
 
 export default function InviteClient() {
   const searchParams = useSearchParams()
@@ -20,32 +21,43 @@ export default function InviteClient() {
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: 'system-ui', lineHeight: 1.8 }}>
-      <h1>ようこそ{name ? `、${name} さん` : ''} 🍖</h1>
-      <p>meatup 2026 への招待です。サインインして参加に進みます。</p>
+    <main className={styles.wrap}>
+      <div className={`card ${styles.card}`}>
+        <div className={styles.emoji}>🍖</div>
+        <h1 className={styles.title}>
+          ようこそ{name ? <>、<span className={styles.name}>{name}</span> さん</> : ''}
+        </h1>
+        <p className={styles.lead}>meatup 2026 への招待です。サインインして参加に進みます。</p>
 
-      {loading ? (
-        <p>読み込み中…</p>
-      ) : user ? (
-        <div style={{ display: 'grid', gap: 8, maxWidth: 320 }}>
-          <p>サインイン済み：{user.displayName ?? user.email ?? user.uid}</p>
-          <button onClick={proceedToRegister} style={{ padding: '8px 16px' }}>
-            参加へ進む →
-          </button>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 8, maxWidth: 320 }}>
-          <button onClick={() => void signInWithGoogle().catch(console.error)} style={{ padding: '8px 16px' }}>
-            Google でサインイン
-          </button>
-          <button onClick={() => void signInWithGithub().catch(console.error)} style={{ padding: '8px 16px' }}>
-            GitHub でサインイン
-          </button>
-          <p style={{ color: '#888', fontSize: 12 }}>
-            ※ メールでのサインインは後日追加予定。
-          </p>
-        </div>
-      )}
+        {loading ? (
+          <p className={styles.lead}>読み込み中…</p>
+        ) : user ? (
+          <div className={styles.actions}>
+            <p className={styles.signedin}>
+              サインイン済み：{user.displayName ?? user.email ?? user.uid}
+            </p>
+            <button className="btn btn--primary btn--block" onClick={proceedToRegister}>
+              参加へ進む →
+            </button>
+          </div>
+        ) : (
+          <div className={styles.actions}>
+            <button
+              className="btn btn--primary btn--block"
+              onClick={() => void signInWithGoogle().catch(console.error)}
+            >
+              Google でサインイン
+            </button>
+            <button
+              className="btn btn--block"
+              onClick={() => void signInWithGithub().catch(console.error)}
+            >
+              GitHub でサインイン
+            </button>
+            <p className="muted">※ メールでのサインインは後日追加予定。</p>
+          </div>
+        )}
+      </div>
     </main>
   )
 }

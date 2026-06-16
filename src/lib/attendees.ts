@@ -76,6 +76,14 @@ export async function createAttendee(input: CreateAttendeeInput) {
     if (approved) data.approvedAt = serverTimestamp()
 
     tx.set(doc(db, 'attendees', input.uid), data)
+
+    // Public, minimal projection for OG image generation (read without auth).
+    // Holds only non-sensitive fields already printed on the shared ticket.
+    tx.set(doc(db, 'shares', input.uid), {
+      name: input.name,
+      ticketNo,
+      edition: EDITION,
+    })
   })
 }
 

@@ -83,6 +83,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Public, minimal projection for OG image generation (name + ticketNo).
+    // World-readable on purpose (used by the unauthenticated share/OG edge
+    // function); only the owner may write their own, and only these fields.
+    match /shares/{uid} {
+      allow read: if true;
+      allow write: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'ticketNo', 'edition']);
+    }
+
     match /admins/{uid} {
       // A user may check their OWN admin status; admins may read any.
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());

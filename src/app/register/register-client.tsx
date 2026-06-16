@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { createAttendee } from '@/lib/attendees'
+import styles from './register.module.css'
 
 export default function RegisterClient() {
   const searchParams = useSearchParams()
@@ -49,43 +50,54 @@ export default function RegisterClient() {
   }
 
   if (loading || !user) {
-    return <main style={{ padding: 24 }}>読み込み中…</main>
+    return <main className={styles.wrap}>読み込み中…</main>
   }
 
   return (
-    <main style={{ padding: 24, fontFamily: 'system-ui', lineHeight: 1.8 }}>
-      <h1>参加する</h1>
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
-        <label style={{ display: 'grid', gap: 4 }}>
-          名前（編集可）
-          <input value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label style={{ display: 'grid', gap: 4 }}>
-          何してるひと？（任意）
-          <input value={job} onChange={(e) => setJob(e.target.value)} />
-        </label>
-        <fieldset style={{ display: 'grid', gap: 4, border: 'none', padding: 0, margin: 0 }}>
-          <legend>どっち？（任意）</legend>
-          <div style={{ display: 'flex', gap: 16 }}>
-            {['男', '女', 'その他'].map((option) => (
-              <label key={option} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <input
-                  type="radio"
-                  name="gender"
-                  value={option}
-                  checked={gender === option}
-                  onChange={(e) => setGender(e.target.value)}
-                />
-                {option}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <button type="submit" disabled={submitting} style={{ padding: '8px 16px' }}>
-          {submitting ? '送信中…' : '参加する → チケットへ'}
-        </button>
-        {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      </form>
+    <main className={styles.wrap}>
+      <div className={`card ${styles.card}`}>
+        <h1 className={styles.title}>参加する 🍖</h1>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <label className={styles.field}>
+            <span className={styles.label}>名前（編集可）</span>
+            <input
+              className={styles.input}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.label}>何してるひと？（任意）</span>
+            <input
+              className={styles.input}
+              value={job}
+              onChange={(e) => setJob(e.target.value)}
+            />
+          </label>
+          <fieldset className={styles.field} style={{ border: 'none' }}>
+            <span className={styles.label}>どっち？（任意）</span>
+            <div className={styles.radios}>
+              {['男', '女', 'その他'].map((option) => (
+                <label key={option} className={styles.radio}>
+                  <input
+                    type="radio"
+                    name="gender"
+                    value={option}
+                    checked={gender === option}
+                    onChange={(e) => setGender(e.target.value)}
+                  />
+                  {option}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
+            {submitting ? '送信中…' : '参加する → チケットへ'}
+          </button>
+          {error && <p className={styles.error}>{error}</p>}
+        </form>
+      </div>
     </main>
   )
 }

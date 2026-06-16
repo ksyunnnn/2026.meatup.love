@@ -11,6 +11,7 @@ import {
 } from '@/lib/attendees'
 import { createInvite, listInvites, type InviteWithToken } from '@/lib/invites'
 import type { AttendeeStatus } from '@/lib/types'
+import styles from './admin.module.css'
 
 const STATUS_LABEL: Record<AttendeeStatus, string> = {
   pending: '受付（確認待ち）',
@@ -101,21 +102,23 @@ export default function AdminPage() {
   }
 
   if (loading || (user && !checked)) {
-    return <main style={{ padding: 24 }}>読み込み中…</main>
+    return <main className={styles.wrap}>読み込み中…</main>
   }
 
   if (!user) {
     return (
-      <main style={{ padding: 24, fontFamily: 'system-ui', lineHeight: 1.8 }}>
+      <main className={styles.wrap}>
         <p>サインインが必要です。</p>
-        <Link href="/invite">招待ページへ</Link>
+        <Link className="btn btn--primary" href="/invite">
+          招待ページへ
+        </Link>
       </main>
     )
   }
 
   if (!admin) {
     return (
-      <main style={{ padding: 24, fontFamily: 'system-ui', lineHeight: 1.8 }}>
+      <main className={styles.wrap}>
         <p>このページは主催者専用です。</p>
       </main>
     )
@@ -124,28 +127,26 @@ export default function AdminPage() {
   const pending = attendees.filter((a) => a.status === 'pending')
 
   return (
-    <main style={{ padding: 24, fontFamily: 'system-ui', lineHeight: 1.8, maxWidth: 640 }}>
-      <h1>管理</h1>
+    <main className={styles.wrap}>
+      <h1 className={styles.h1}>管理 🍖</h1>
 
-      <section>
-        <h2>確認待ち（{pending.length}）</h2>
+      <section className={styles.section}>
+        <h2 className={styles.h2}>確認待ち（{pending.length}）</h2>
         {pending.length === 0 ? (
-          <p style={{ color: '#888' }}>確認待ちはありません。</p>
+          <p className={styles.empty}>確認待ちはありません。</p>
         ) : (
-          <ul style={{ display: 'grid', gap: 8, listStyle: 'none', padding: 0 }}>
+          <ul className={styles.list}>
             {pending.map((p) => (
-              <li key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <span>
+              <li key={p.id} className={styles.row}>
+                <span className={styles.rowMain}>
                   {p.name}
                   {p.job ? `（${p.job}）` : ''}
-                  <span style={{ color: '#888', fontSize: 12, marginLeft: 8 }}>
-                    No. {p.ticketNo}
-                  </span>
+                  <span className={styles.sub}>No. {p.ticketNo}</span>
                 </span>
                 <button
+                  className={`btn btn--primary ${styles.btnSm} ${styles.spacer}`}
                   onClick={() => handleApprove(p.id)}
                   disabled={busy === p.id}
-                  style={{ padding: '4px 12px', marginLeft: 'auto' }}
                 >
                   {busy === p.id ? '確認中…' : '確認しました！'}
                 </button>
@@ -155,35 +156,33 @@ export default function AdminPage() {
         )}
       </section>
 
-      <section>
-        <h2>招待リンクを発行</h2>
-        <form onSubmit={handleCreateInvite} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <section className={styles.section}>
+        <h2 className={styles.h2}>招待リンクを発行</h2>
+        <form onSubmit={handleCreateInvite} className={styles.inviteForm}>
           <input
+            className={styles.input}
             value={inviteName}
             onChange={(e) => setInviteName(e.target.value)}
             placeholder="名前（任意・プリフィル用）"
-            style={{ flex: 1 }}
           />
-          <button type="submit" disabled={creating} style={{ padding: '4px 12px' }}>
+          <button type="submit" className={`btn btn--primary ${styles.btnSm}`} disabled={creating}>
             {creating ? '作成中…' : '作成'}
           </button>
         </form>
         {invites.length > 0 && (
-          <ul style={{ display: 'grid', gap: 8, listStyle: 'none', padding: 0, marginTop: 12 }}>
+          <ul className={styles.list}>
             {invites.map((inv) => {
               const url = inviteUrl(inv)
               return (
-                <li key={inv.token} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ minWidth: 0 }}>
+                <li key={inv.token} className={styles.row}>
+                  <span className={styles.rowMain}>
                     {inv.name ?? '（名前なし）'}
-                    <span style={{ color: '#888', fontSize: 12, marginLeft: 8 }}>
-                      {inv.usedBy ? '使用済み' : '未使用'}
-                    </span>
+                    <span className={styles.sub}>{inv.usedBy ? '使用済み' : '未使用'}</span>
                   </span>
                   <button
+                    className={`btn ${styles.btnSm} ${styles.spacer}`}
                     onClick={() => handleCopy(url, inv.token)}
                     disabled={!!inv.usedBy}
-                    style={{ padding: '2px 10px', marginLeft: 'auto' }}
                     title={url}
                   >
                     {copied === inv.token ? 'コピー済み' : 'リンクをコピー'}
@@ -195,21 +194,19 @@ export default function AdminPage() {
         )}
       </section>
 
-      <section>
-        <h2>参加者一覧（{attendees.length}）</h2>
+      <section className={styles.section}>
+        <h2 className={styles.h2}>参加者一覧（{attendees.length}）</h2>
         {attendees.length === 0 ? (
-          <p style={{ color: '#888' }}>まだいません。</p>
+          <p className={styles.empty}>まだいません。</p>
         ) : (
-          <ul style={{ display: 'grid', gap: 6, listStyle: 'none', padding: 0 }}>
+          <ul className={styles.list}>
             {attendees.map((a) => (
-              <li key={a.id} style={{ display: 'flex', gap: 12 }}>
-                <span>
+              <li key={a.id} className={styles.row}>
+                <span className={styles.rowMain}>
                   {a.name}
                   {a.job ? `（${a.job}）` : ''}
                 </span>
-                <span style={{ color: '#888', fontSize: 12, marginLeft: 'auto' }}>
-                  {STATUS_LABEL[a.status]}
-                </span>
+                <span className={styles.status}>{STATUS_LABEL[a.status]}</span>
               </li>
             ))}
           </ul>

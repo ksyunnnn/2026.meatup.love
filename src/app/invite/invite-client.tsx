@@ -74,7 +74,7 @@ export default function InviteClient() {
         ) : user ? (
           <div className="mt-2 flex flex-col gap-3">
             <p className="text-[14px] text-ink-soft">
-              サインイン済み：{user.displayName ?? user.email ?? user.uid}
+              サインイン済み：{user.email ?? user.displayName ?? user.uid}
             </p>
             <button className="btn btn--primary btn--block" onClick={proceedToRegister}>
               参加へ進む →

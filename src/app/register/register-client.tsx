@@ -37,7 +37,7 @@ export default function RegisterClient() {
     try {
       await createAttendee({
         uid: user.uid,
-        authName: user.displayName ?? user.email ?? user.uid,
+        authName: user.email ?? user.displayName ?? user.uid,
         name,
         job: job || undefined,
         gender: gender || undefined,

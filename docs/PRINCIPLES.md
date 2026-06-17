@@ -77,4 +77,7 @@
 ## 既知のギャップ（過剰設計を避けて未実施＝YAGNI）
 - `<TicketCard>` 等のUI抽出：現状チケット表示の再利用先が1か所のみのため未抽出（消費者が増えたら抽出）。
   YAGNI（XP, Beck/Jeffries）に従い、必要になってから。
-- テストの永続化（現状は手動検証）：本番品質に寄せるなら最小テスト＋CIを追加。
+- ~~テストの永続化~~ → **追加済み**：Vitest 単体テスト（`test/unit/`：ticket コード形式・
+  `isValidId`/`escapeHtml`/`fetchShare`）と Firestore ルールテスト（`test/rules/`：自己承認不可・
+  招待単回使用・shares 公開read/本人write/ticketNo不変・admins 自己read）。CI（`.github/workflows/ci.yml`）
+  で lint→build→unit→rules を実行。`npm test` / `npm run test:rules`。

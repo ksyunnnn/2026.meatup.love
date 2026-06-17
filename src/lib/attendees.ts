@@ -11,18 +11,10 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Attendee, AttendeeStatus } from './types'
+import { EDITION, generateTicketNo } from './ticket'
 
-export const EDITION = '2026'
-
-// Random short ticket code, e.g. "MU-2026-7Q3K" (no ambiguous 0/O/1/I).
-export function generateTicketNo() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 4; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return `MU-${EDITION}-${code}`
-}
+// Re-export so existing importers (invites.ts, admin) keep working.
+export { EDITION, generateTicketNo }
 
 export interface CreateAttendeeInput {
   uid: string

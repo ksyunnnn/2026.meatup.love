@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/use-auth'
 import { getMyAttendee } from '@/lib/attendees'
 import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
 import type { Attendee } from '@/lib/types'
-import { CONTACTS, PAYPAY_URL, FEE } from '@/lib/contacts'
+import { CONTACTS, FEE } from '@/lib/contacts'
 import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
 
 const wrapCls =
@@ -168,23 +168,19 @@ export default function TicketPage() {
         <p className="mt-1 text-[26px] font-extrabold text-meat">
           {FEE.regular.toLocaleString()}円
         </p>
-        <p className="text-[13px] text-ink-soft">
-          🉐 {FEE.earlyDeadline}までの事前PayPayなら {FEE.early.toLocaleString()}円
-        </p>
-        {PAYPAY_URL && (
-          <a
-            href={PAYPAY_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn--primary btn--block mt-3"
-          >
-            PayPayで事前に払う
-          </a>
-        )}
+        <div className="mt-3 rounded-[10px] border border-meat/30 bg-cream p-3">
+          <p className="text-[14px] font-bold text-meat">🉐 事前PayPayがおトク＆ラク</p>
+          <p className="mt-1 text-[13px]">
+            〜{FEE.earlyDeadline}は {FEE.early.toLocaleString()}円
+          </p>
+          <p className="mt-2 text-[13px] text-ink-soft">
+            事前決済はPayPayで受け付けます。「事前で！」って連絡くれたら、その場で受け取りリンクを送るね🙏
+          </p>
+        </div>
         <p className="mt-3 text-[13px] text-ink-soft">
-          当日は PayPay か 現金でもOK。
+          当日は PayPay か 現金（{FEE.regular.toLocaleString()}円）でもOK。
         </p>
-        <p className="mt-2 text-[14px]">払ったら、ひとこと連絡ちょうだい🙏</p>
+        <p className="mt-3 text-[14px]">連絡はこちらから 👇</p>
         <a
           href={CONTACTS.line}
           target="_blank"

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-4 pt-[calc(3rem_+_env(safe-area-inset-top))] pb-[calc(3rem_+_env(safe-area-inset-bottom))] text-center">
+    <main className="flex min-h-svh flex-col items-center justify-center gap-4 border-[12px] border-meat px-4 pt-[calc(3rem_+_env(safe-area-inset-top))] pb-[calc(3rem_+_env(safe-area-inset-bottom))] text-center">
       <div className="text-[72px] leading-none drop-shadow-[0_6px_10px_rgba(126,0,29,0.25)]">
         🍖
       </div>

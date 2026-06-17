@@ -119,7 +119,7 @@ export default function Home() {
       </section>
 
       {/* ── ABOUT（さらっと・セクション扱いにしない軽い導入） ── */}
-      <section className="w-full max-w-[420px] px-6 py-24 text-center text-[15px] leading-snug text-ink-soft">
+      <section className="w-full max-w-[420px] px-6 py-24 text-center text-[15px] font-bold leading-snug text-ink-soft">
         <p>肉を通してわいがや交流するイベントです✌</p>
         <p className="mt-1.5">バーベキュー + 料理と酒だすよ！あとなんかいろいろ！</p>
       </section>

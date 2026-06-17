@@ -22,21 +22,26 @@ export interface CreateAttendeeInput {
   name: string
   job?: string
   gender?: string
+  connection?: string // FR8: free-text referrer / how they heard
   inviteToken?: string
 }
 
 /**
  * Register a guest.
- * Invited (valid, unused token) → confirmed immediately AND the invite is
- * consumed (usedBy = this uid); otherwise → pending (host confirms later).
- * Runs in a transaction so a single invite link auto-confirms exactly one
- * person: concurrent uses of the same token retry and fall back to pending.
+ * A valid, unused invite link is consumed (usedBy = this uid) and the referral
+ * is recorded. Auto-confirmation happens ONLY when the host (admin) issued the
+ * invite; invites issued by confirmed attendees (FR9) still need host approval,
+ * so they start pending — this keeps the approval gate (NFR4). Walk-ins start
+ * pending too. Runs in a transaction so a single invite link is consumed once;
+ * concurrent uses retry and fall back to pending.
  */
 export async function createAttendee(input: CreateAttendeeInput) {
   const ticketNo = generateTicketNo()
 
   await runTransaction(db, async (tx) => {
+    // All reads must precede writes in a Firestore transaction.
     let approved = false
+    let inviteToConsume: ReturnType<typeof doc> | null = null
 
     if (input.inviteToken) {
       const inviteRef = doc(db, 'invites', input.inviteToken)
@@ -44,11 +49,15 @@ export async function createAttendee(input: CreateAttendeeInput) {
       if (inviteSnap.exists()) {
         const inv = inviteSnap.data()
         if (inv.edition === EDITION && !('usedBy' in inv)) {
-          approved = true
-          tx.update(inviteRef, { usedBy: input.uid })
+          inviteToConsume = inviteRef
+          // Auto-confirm only for host(admin)-issued invites.
+          const issuerAdmin = await tx.get(doc(db, 'admins', String(inv.issuedBy)))
+          approved = issuerAdmin.exists()
         }
       }
     }
+
+    if (inviteToConsume) tx.update(inviteToConsume, { usedBy: input.uid })
 
     const status: AttendeeStatus = approved ? 'approved' : 'pending'
     const data: Record<string, unknown> = {
@@ -61,6 +70,7 @@ export async function createAttendee(input: CreateAttendeeInput) {
     }
     if (input.job) data.job = input.job
     if (input.gender) data.gender = input.gender
+    if (input.connection) data.connection = input.connection
     if (input.inviteToken) {
       data.inviteToken = input.inviteToken
       data.invitedAs = input.name

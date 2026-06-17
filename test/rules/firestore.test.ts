@@ -97,6 +97,65 @@ describe('invites (single-use)', () => {
   })
 })
 
+describe('FR8/FR9 (referral tree)', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore()
+      await setDoc(doc(db, 'admins/admin1'), {})
+      // admin-issued and attendee-issued invites for the same edition
+      await setDoc(doc(db, 'invites/adminTok'), {
+        edition: '2026',
+        issuedBy: 'admin1',
+        createdAt: serverTimestamp(),
+      })
+      await setDoc(doc(db, 'invites/attTok'), {
+        edition: '2026',
+        issuedBy: 'host-attendee',
+        createdAt: serverTimestamp(),
+      })
+      // a confirmed and an unconfirmed attendee (FR9 issuance rights)
+      await setDoc(doc(db, 'attendees/appr'), attendee('approved'))
+      await setDoc(doc(db, 'attendees/pend'), attendee('pending'))
+    })
+  })
+
+  it('admin-issued invite auto-confirms (approved create allowed)', async () => {
+    const u = testEnv.authenticatedContext('newA').firestore()
+    await assertSucceeds(
+      setDoc(doc(u, 'attendees/newA'), { ...attendee('approved'), inviteToken: 'adminTok' }),
+    )
+  })
+
+  it('attendee-issued invite does NOT auto-confirm (approved rejected, pending ok)', async () => {
+    const u = testEnv.authenticatedContext('newB').firestore()
+    await assertFails(
+      setDoc(doc(u, 'attendees/newB'), { ...attendee('approved'), inviteToken: 'attTok' }),
+    )
+    await assertSucceeds(
+      setDoc(doc(u, 'attendees/newB'), { ...attendee('pending'), inviteToken: 'attTok' }),
+    )
+  })
+
+  it('a confirmed attendee may issue an invite; an unconfirmed one may not', async () => {
+    const appr = testEnv.authenticatedContext('appr').firestore()
+    await assertSucceeds(
+      setDoc(doc(appr, 'invites/fromAppr'), {
+        edition: '2026',
+        issuedBy: 'appr',
+        createdAt: serverTimestamp(),
+      }),
+    )
+    const pend = testEnv.authenticatedContext('pend').firestore()
+    await assertFails(
+      setDoc(doc(pend, 'invites/fromPend'), {
+        edition: '2026',
+        issuedBy: 'pend',
+        createdAt: serverTimestamp(),
+      }),
+    )
+  })
+})
+
 describe('shares (public OG projection)', () => {
   it('is world-readable', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {

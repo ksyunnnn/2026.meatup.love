@@ -150,6 +150,7 @@ export default function AdminPage() {
                   {p.name}
                   {p.job ? `（${p.job}）` : ''}
                   <span className={subCls}>No. {p.ticketNo}</span>
+                  {p.connection ? <span className={subCls}>経由: {p.connection}</span> : ''}
                 </span>
                 <button
                   className={`btn btn--primary ml-auto ${btnSm}`}
@@ -213,6 +214,7 @@ export default function AdminPage() {
                 <span className="min-w-0">
                   {a.name}
                   {a.job ? `（${a.job}）` : ''}
+                  {a.connection ? <span className={subCls}>経由: {a.connection}</span> : ''}
                 </span>
                 <span className="ml-auto whitespace-nowrap text-[12px] text-ink-soft">{STATUS_LABEL[a.status]}</span>
               </li>

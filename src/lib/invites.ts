@@ -21,12 +21,20 @@ export function generateToken(): string {
 /** Invite plus its document id (== the token). */
 export type InviteWithToken = Invite & { token: string }
 
-/** Host issues an invite. Returns the new token. */
-export async function createInvite(adminUid: string, name?: string): Promise<string> {
+/**
+ * FR9: how many invite links one confirmed attendee may issue. Soft, UI-enforced
+ * — it is NOT a security boundary (attendee-issued invites don't auto-confirm
+ * anyone; the host still approves), and Firestore rules can't count documents
+ * without Cloud Functions (NFR1 $0). Admins are unlimited.
+ */
+export const INVITE_QUOTA = 3
+
+/** Issue an invite (host, or a confirmed attendee under FR9). Returns the token. */
+export async function createInvite(issuerUid: string, name?: string): Promise<string> {
   const token = generateToken()
   const data: Record<string, unknown> = {
     edition: EDITION,
-    issuedBy: adminUid,
+    issuedBy: issuerUid,
     createdAt: serverTimestamp(),
   }
   if (name) data.name = name
@@ -37,6 +45,17 @@ export async function createInvite(adminUid: string, name?: string): Promise<str
 /** All invites for this edition (admin view). */
 export async function listInvites(): Promise<InviteWithToken[]> {
   const q = query(collection(db, 'invites'), where('edition', '==', EDITION))
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ token: d.id, ...(d.data() as Invite) }))
+}
+
+/** Invites issued by a given user (FR9: an attendee's own invite slots). */
+export async function listMyInvites(uid: string): Promise<InviteWithToken[]> {
+  const q = query(
+    collection(db, 'invites'),
+    where('edition', '==', EDITION),
+    where('issuedBy', '==', uid),
+  )
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ token: d.id, ...(d.data() as Invite) }))
 }

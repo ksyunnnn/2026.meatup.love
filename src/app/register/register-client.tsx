@@ -16,6 +16,7 @@ export default function RegisterClient() {
   const [name, setName] = useState(searchParams.get('name') ?? '')
   const [job, setJob] = useState('')
   const [gender, setGender] = useState('')
+  const [connection, setConnection] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -41,6 +42,7 @@ export default function RegisterClient() {
         name,
         job: job || undefined,
         gender: gender || undefined,
+        connection: connection || undefined,
         inviteToken: token || undefined,
       })
       router.push('/ticket')
@@ -75,6 +77,15 @@ export default function RegisterClient() {
               className={inputCls}
               value={job}
               onChange={(e) => setJob(e.target.value)}
+            />
+          </label>
+          <label className="grid gap-2">
+            <span className="text-[15px] font-bold">どこ経由？／紹介者（任意）</span>
+            <input
+              className={inputCls}
+              value={connection}
+              onChange={(e) => setConnection(e.target.value)}
+              placeholder="例：佐藤さんの紹介 / X で見た"
             />
           </label>
           <fieldset className="grid gap-2 border-0">

@@ -134,6 +134,18 @@ export default function AdminPage() {
 
   const pending = attendees.filter((a) => a.status === 'pending')
 
+  // Referral source, derived from the invite link they used (no manual input):
+  // host-issued → "主催者の招待", attendee-issued → "◯◯ さんの招待", none → "飛び込み".
+  const inviteByToken = new Map(invites.map((i) => [i.token, i]))
+  const nameByUid = new Map(attendees.map((a) => [a.id, a.name]))
+  function referral(a: AttendeeWithId): string {
+    if (!a.inviteToken) return '飛び込み'
+    const inv = inviteByToken.get(a.inviteToken)
+    if (!inv) return '招待リンク'
+    const issuerName = nameByUid.get(inv.issuedBy)
+    return issuerName ? `${issuerName} さんの招待` : '主催者の招待'
+  }
+
   return (
     <main className={wrapCls}>
       <h1 className="text-[26px] font-extrabold">管理 🍖</h1>
@@ -150,7 +162,7 @@ export default function AdminPage() {
                   {p.name}
                   {p.job ? `（${p.job}）` : ''}
                   <span className={subCls}>No. {p.ticketNo}</span>
-                  {p.connection ? <span className={subCls}>経由: {p.connection}</span> : ''}
+                  <span className={subCls}>{referral(p)}</span>
                 </span>
                 <button
                   className={`btn btn--primary ml-auto ${btnSm}`}
@@ -214,7 +226,7 @@ export default function AdminPage() {
                 <span className="min-w-0">
                   {a.name}
                   {a.job ? `（${a.job}）` : ''}
-                  {a.connection ? <span className={subCls}>経由: {a.connection}</span> : ''}
+                  <span className={subCls}>{referral(a)}</span>
                 </span>
                 <span className="ml-auto whitespace-nowrap text-[12px] text-ink-soft">{STATUS_LABEL[a.status]}</span>
               </li>

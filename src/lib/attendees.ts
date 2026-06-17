@@ -22,7 +22,6 @@ export interface CreateAttendeeInput {
   name: string
   job?: string
   gender?: string
-  connection?: string // FR8: free-text referrer / how they heard
   inviteToken?: string
 }
 
@@ -70,7 +69,6 @@ export async function createAttendee(input: CreateAttendeeInput) {
     }
     if (input.job) data.job = input.job
     if (input.gender) data.gender = input.gender
-    if (input.connection) data.connection = input.connection
     if (input.inviteToken) {
       data.inviteToken = input.inviteToken
       data.invitedAs = input.name

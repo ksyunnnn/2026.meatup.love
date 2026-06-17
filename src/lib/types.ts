@@ -13,7 +13,6 @@ export interface Attendee {
   edition: string // e.g. "2026"
   invitedAs?: string // the name carried by the invite link, kept for the record
   inviteToken?: string // present when the guest arrived via a valid invite link
-  connection?: string // FR8: free-text "誰経由か / きっかけ" (who referred / how heard)
   createdAt: Timestamp
   approvedAt?: Timestamp
   approvedBy?: string // admin uid that approved

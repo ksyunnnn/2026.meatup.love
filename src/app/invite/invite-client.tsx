@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { Oniku } from '@/components/oniku'
+import { getMyAttendee } from '@/lib/attendees'
+import type { Attendee } from '@/lib/types'
 import {
   signInWithGoogle,
   signInWithGithub,
@@ -24,6 +26,8 @@ export default function InviteClient() {
   const [sent, setSent] = useState(false)
   const [emailError, setEmailError] = useState('')
   const [inApp, setInApp] = useState(false)
+  const [attendee, setAttendee] = useState<Attendee | null>(null)
+  const [checkingAttendee, setCheckingAttendee] = useState(true)
 
   // Detect SNS in-app browser (client only) to suggest opening externally.
   useEffect(() => {
@@ -37,6 +41,25 @@ export default function InviteClient() {
       setEmailError('リンクでのサインインに失敗しました。もう一度お試しください。')
     })
   }, [])
+
+  // Already signed in? Look up their registration so we can route a returning
+  // guest to their ticket instead of the (doomed) registration form.
+  useEffect(() => {
+    if (loading || !user) return
+    let active = true
+    getMyAttendee(user.uid)
+      .then((a) => {
+        if (!active) return
+        setAttendee(a)
+        setCheckingAttendee(false)
+      })
+      .catch(() => {
+        if (active) setCheckingAttendee(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [loading, user])
 
   // After auth, carry the prefill name (+ invite token) to the form.
   function proceedToRegister() {
@@ -77,9 +100,29 @@ export default function InviteClient() {
             <p className="text-[14px] text-ink-soft">
               サインイン済み：{user.email ?? user.displayName ?? user.uid}
             </p>
-            <button className="btn btn--primary btn--block" onClick={proceedToRegister}>
-              参加へ進む →
-            </button>
+            {checkingAttendee ? (
+              <p className="text-[15px] text-ink-soft">読み込み中…</p>
+            ) : attendee ? (
+              <>
+                <p className="text-[15px] text-ink">
+                  すでに参加登録済みです
+                  {attendee.status === 'approved'
+                    ? '（確定 ✅）'
+                    : '（主催者の確認待ち）'}
+                  。
+                </p>
+                <button
+                  className="btn btn--primary btn--block"
+                  onClick={() => router.push('/ticket')}
+                >
+                  チケットを見る →
+                </button>
+              </>
+            ) : (
+              <button className="btn btn--primary btn--block" onClick={proceedToRegister}>
+                参加へ進む →
+              </button>
+            )}
           </div>
         ) : (
           <div className="mt-2 flex flex-col gap-3">

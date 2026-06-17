@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
-import { createAttendee } from '@/lib/attendees'
+import { createAttendee, getMyAttendee } from '@/lib/attendees'
 
 const inputCls =
   'w-full min-h-12 rounded-[8px] border-2 border-line bg-white px-4 py-3 text-ink focus:border-meat focus:outline-none'
@@ -18,6 +18,7 @@ export default function RegisterClient() {
   const [gender, setGender] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [checking, setChecking] = useState(true)
 
   // Require sign-in: send unauthenticated visitors back to the invite page.
   useEffect(() => {
@@ -28,6 +29,25 @@ export default function RegisterClient() {
       router.replace(`/invite?${qs.toString()}`)
     }
   }, [loading, user, name, token, router])
+
+  // Already registered? Route to the ticket instead of a re-submit that the
+  // rules would reject (a new ticketNo can't overwrite the existing record).
+  useEffect(() => {
+    if (loading || !user) return
+    let active = true
+    getMyAttendee(user.uid)
+      .then((a) => {
+        if (!active) return
+        if (a) router.replace('/ticket')
+        else setChecking(false)
+      })
+      .catch(() => {
+        if (active) setChecking(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [loading, user, router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,12 +66,12 @@ export default function RegisterClient() {
       router.push('/ticket')
     } catch (err) {
       console.error(err)
-      setError('保存に失敗しました。時間をおいて再度お試しください。')
+      setError('うまく登録できませんでした。すでに登録済みの場合はチケットをご確認ください。少し時間をおいて再度お試しください。')
       setSubmitting(false)
     }
   }
 
-  if (loading || !user) {
+  if (loading || !user || checking) {
     return <main className="flex min-h-dvh items-center justify-center px-4 py-6">読み込み中…</main>
   }
 
@@ -70,15 +90,16 @@ export default function RegisterClient() {
             />
           </label>
           <label className="grid gap-2">
-            <span className="text-[15px] font-bold">何してるひと？（任意）</span>
+            <span className="text-[15px] font-bold">何してるひと？</span>
             <input
               className={inputCls}
               value={job}
               onChange={(e) => setJob(e.target.value)}
+              required
             />
           </label>
           <fieldset className="grid gap-2 border-0">
-            <span className="text-[15px] font-bold">どっち？（任意）</span>
+            <span className="text-[15px] font-bold">どっち？</span>
             <div className="flex gap-2">
               {['男', '女', 'その他'].map((option) => (
                 <label
@@ -92,6 +113,7 @@ export default function RegisterClient() {
                     checked={gender === option}
                     onChange={(e) => setGender(e.target.value)}
                     className="accent-meat"
+                    required
                   />
                   {option}
                 </label>

@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Attendee, AttendeeStatus } from './types'
-import { EDITION, generateTicketNo } from './ticket'
+import { EDITION, generateTicketNo, displayRole } from './ticket'
 
 // Re-export so existing importers (invites.ts, admin) keep working.
 export { EDITION, generateTicketNo }
@@ -83,12 +83,19 @@ export async function createAttendee(input: CreateAttendeeInput) {
     tx.set(doc(db, 'attendees', input.uid), data)
 
     // Public, minimal projection for OG image generation (read without auth).
-    // Holds only non-sensitive fields already printed on the shared ticket.
-    tx.set(doc(db, 'shares', input.uid), {
+    // Holds only the non-sensitive fields drawn on the shared ticket: the
+    // resolved role label and the expectation keys (→ watermark kanji).
+    // Gender is intentionally NOT projected (sensitive, not on the ticket).
+    const share: Record<string, unknown> = {
       name: input.name,
       ticketNo,
       edition: EDITION,
-    })
+    }
+    const role = displayRole(input.job, input.jobOther)
+    if (role) share.role = role
+    if (input.expectations && input.expectations.length > 0)
+      share.expectations = input.expectations
+    tx.set(doc(db, 'shares', input.uid), share)
   })
 }
 

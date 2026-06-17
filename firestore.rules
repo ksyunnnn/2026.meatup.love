@@ -99,21 +99,27 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Public, minimal projection for OG image generation (name + ticketNo).
-    // World-readable on purpose (used by the unauthenticated share/OG edge
-    // function); only the owner may write their own, and only these fields.
+    // Public, minimal projection for OG image generation. World-readable on
+    // purpose (used by the unauthenticated share/OG edge function); only the
+    // owner may write their own, and only this allow-listed set of fields.
+    // role + expectations drive the personalized ticket art; gender is NOT
+    // here on purpose (sensitive, not shown on the shared ticket).
     match /shares/{uid} {
       allow read: if true;
-      // Owner-only; exactly these fields; ticketNo is fixed once written
+      function sharesFieldsOk() {
+        return request.resource.data.keys()
+          .hasOnly(['name', 'ticketNo', 'edition', 'role', 'expectations']);
+      }
+      // Owner-only; only allow-listed fields; ticketNo is fixed once written
       // (name may change later for display, but the number can't be forged).
       allow create: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['name', 'ticketNo', 'edition'])
+        && sharesFieldsOk()
         && request.resource.data.name is string
         && request.resource.data.ticketNo is string;
       allow update: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['name', 'ticketNo', 'edition'])
+        && sharesFieldsOk()
         && request.resource.data.ticketNo == resource.data.ticketNo;
     }
 

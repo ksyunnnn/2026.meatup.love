@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { EDITION, generateTicketNo } from '../../src/lib/ticket'
+import {
+  EDITION,
+  generateTicketNo,
+  expectationChars,
+  displayRole,
+} from '../../src/lib/ticket'
 
 describe('generateTicketNo', () => {
   it('matches the MU-<edition>-XXXX format', () => {
@@ -16,5 +21,39 @@ describe('generateTicketNo', () => {
       const code = generateTicketNo().split('-')[2]
       expect(code).not.toMatch(/[0O1I]/)
     }
+  })
+})
+
+describe('expectationChars', () => {
+  it('maps each known key to its watermark kanji, in order', () => {
+    expect(expectationChars(['meat', 'drink', 'play', 'connect'])).toEqual([
+      '肉',
+      '麦',
+      '遊',
+      '繋',
+    ])
+  })
+
+  it('drops unknown keys and tolerates undefined', () => {
+    expect(expectationChars(['meat', 'bogus'])).toEqual(['肉'])
+    expect(expectationChars(undefined)).toEqual([])
+    expect(expectationChars([])).toEqual([])
+  })
+})
+
+describe('displayRole', () => {
+  it('returns the category as-is for the fixed buckets', () => {
+    expect(displayRole('エンジニア')).toBe('エンジニア')
+  })
+
+  it('uses the free text for その他, falling back to その他', () => {
+    expect(displayRole('その他', '寿司職人')).toBe('寿司職人')
+    expect(displayRole('その他', '  ')).toBe('その他')
+    expect(displayRole('その他')).toBe('その他')
+  })
+
+  it('is empty when no job was chosen', () => {
+    expect(displayRole(undefined)).toBe('')
+    expect(displayRole('')).toBe('')
   })
 })

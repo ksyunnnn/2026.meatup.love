@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/use-auth'
 import { getMyAttendee } from '@/lib/attendees'
+import { displayRole, expectationChars } from '@/lib/ticket'
 import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
 import type { Attendee } from '@/lib/types'
 import { CONTACTS, FEE } from '@/lib/contacts'
 import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
+import TicketCard from '@/components/ticket-card'
 
 const wrapCls =
   'flex min-h-dvh flex-col items-center justify-center gap-4 px-4 pt-[calc(1.5rem_+_env(safe-area-inset-top))] pb-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
@@ -128,42 +130,43 @@ export default function TicketPage() {
 
   const confirmed = attendee.status === 'approved'
   const remaining = Math.max(0, INVITE_QUOTA - myInvites.length)
+  const role = displayRole(attendee.job, attendee.jobOther)
+  const chars = expectationChars(attendee.expectations)
+  const shareUrl = user ? `${window.location.origin}/t/${user.uid}` : ''
 
   return (
     <main className={wrapCls}>
-      <div className="w-full max-w-[360px] rounded-[22px] border-[3px] border-ink bg-paper shadow-card-lg">
-        <div className="rounded-t-[19px] bg-meat px-6 py-4 text-center text-white">
-          <div className="font-[family-name:var(--font-display)] text-[30px] leading-none">meatup</div>
-          <div className="font-[family-name:var(--font-display)] text-[16px] opacity-90">2026 🍖</div>
-        </div>
-        <div className="grid gap-3 p-6 text-center">
-          <div className="text-[26px] font-extrabold">{attendee.name} さん</div>
-          <div className="relative my-3 h-0 border-t-2 border-dashed border-line before:absolute before:top-[-13px] before:left-[-15px] before:h-6 before:w-6 before:rounded-full before:bg-cream before:content-[''] after:absolute after:top-[-13px] after:right-[-15px] after:h-6 after:w-6 after:rounded-full after:bg-cream after:content-['']" />
-          <div className="text-[12px] tracking-[0.12em] text-ink-soft">TICKET No.</div>
-          <div className="text-[22px] font-extrabold tracking-[0.06em] tabular-nums text-meat">{attendee.ticketNo}</div>
-          <span
-            className={
-              'justify-self-center inline-flex items-center gap-1 rounded-pill px-4 py-1 text-[14px] font-bold ' +
-              (confirmed
-                ? 'bg-meat text-white'
-                : 'border border-line bg-cream text-ink-soft')
-            }
-          >
-            {confirmed ? '確定 ✅' : '受付（主催者の確認待ち）'}
-          </span>
-        </div>
-      </div>
+      <TicketCard
+        name={attendee.name}
+        role={role}
+        chars={chars}
+        ticketNo={attendee.ticketNo ?? ''}
+        shareUrl={shareUrl}
+      />
 
-      <div className="flex w-full max-w-[360px] flex-col gap-3">
-        <button className="btn btn--flame btn--block" onClick={handleShare}>
-          {copied ? 'リンクをコピーしました' : 'チケットをシェア 🔗'}
+      {/* Status is kept OFF the shareable ticket art (the OG is cached for a
+          year) and shown here for the holder only. */}
+      <span
+        className={
+          'inline-flex items-center gap-1 rounded-pill px-4 py-1 text-[14px] font-bold ' +
+          (confirmed
+            ? 'bg-meat text-white'
+            : 'border border-line bg-cream text-ink-soft')
+        }
+      >
+        {confirmed ? '確定 ✅' : '受付（主催者の確認待ち）'}
+      </span>
+
+      <div className="flex w-full max-w-[540px] flex-col gap-3">
+        <button className="btn btn--primary btn--block" onClick={handleShare}>
+          {copied ? 'リンクをコピーしました ✓' : 'チケットをシェア 🔗'}
         </button>
         <Link className="btn btn--block" href="/">
           トップへ
         </Link>
       </div>
 
-      <section className="w-full max-w-[360px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
+      <section className="w-full max-w-[540px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
         <h2 className="text-[16px] font-extrabold">参加費</h2>
         <div className="mt-3 flex items-start justify-center gap-8">
           <div>
@@ -216,7 +219,7 @@ export default function TicketPage() {
       </section>
 
       {confirmed && (
-        <section className="w-full max-w-[360px]">
+        <section className="w-full max-w-[540px]">
           <h2 className="mb-1 text-center text-[16px] font-extrabold">
             招待枠（残り {remaining} / {INVITE_QUOTA}）
           </h2>

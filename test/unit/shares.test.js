@@ -41,7 +41,7 @@ describe('fetchShare', () => {
     expect(res).toBeNull()
   })
 
-  it('parses the Firestore REST shape into {name, ticketNo}', async () => {
+  it('parses the Firestore REST shape into the share projection', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
@@ -51,12 +51,45 @@ describe('fetchShare', () => {
             name: { stringValue: '佐藤' },
             ticketNo: { stringValue: 'MU-2026-W8G8' },
             edition: { stringValue: '2026' },
+            role: { stringValue: 'エンジニア' },
+            expectations: {
+              arrayValue: {
+                values: [{ stringValue: 'meat' }, { stringValue: 'drink' }],
+              },
+            },
           },
         }),
       })),
     )
     const res = await fetchShare({ FIREBASE_PROJECT_ID: 'demo' }, 'uid')
-    expect(res).toEqual({ name: '佐藤', ticketNo: 'MU-2026-W8G8' })
+    expect(res).toEqual({
+      name: '佐藤',
+      ticketNo: 'MU-2026-W8G8',
+      role: 'エンジニア',
+      expectations: ['meat', 'drink'],
+    })
+  })
+
+  it('defaults role to "" and expectations to [] when absent', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          fields: {
+            name: { stringValue: '佐藤' },
+            ticketNo: { stringValue: 'MU-2026-W8G8' },
+          },
+        }),
+      })),
+    )
+    const res = await fetchShare({ FIREBASE_PROJECT_ID: 'demo' }, 'uid')
+    expect(res).toEqual({
+      name: '佐藤',
+      ticketNo: 'MU-2026-W8G8',
+      role: '',
+      expectations: [],
+    })
   })
 
   it('uses FIRESTORE_BASE_URL override and the shares/{id} path', async () => {

@@ -6,7 +6,8 @@
 - サイト: **https://meatup-2026.pages.dev**（Cloudflare Pages、プロジェクト名 `meatup-2026`）
 - バックエンド: Firebase **`meatup-2026`**
   - Firestore: 作成済み（`asia-northeast1`／Native）、`firestore.rules` デプロイ済み
-  - Auth: **Google 有効**（GitHub は未設定＝任意で後日）
+  - Auth: **Google 有効**（GitHub は未設定＝任意で後日）。**メールリンク（パスワードレス）はコード実装済み
+    だが Console での有効化が必要**＝下記「残タスク」参照
   - 認可ドメイン: `localhost` / `*.firebaseapp.com` / `*.web.app` / **`meatup-2026.pages.dev`**
   - 管理者: `admins/rc9hmkk3M6dbpPfL8h6rhb9bi8h1`（オーナー本人）
 - OG 関数: `functions/t/[id].js`・`og/[id].js`（`wrangler.toml` の `FIREBASE_PROJECT_ID=meatup-2026` を参照）
@@ -25,6 +26,12 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - [ ] **実機の通し確認**（オーナー手動）：招待発行(/admin) → リンクを開く → Google → 登録 →
       チケット → 「シェア」で OGP プレビュー → /admin で確認/承認
 - [ ] GitHub 認証プロバイダ（任意・github.com で OAuth App 作成が必要）
+- [ ] **メールリンク（パスワードレス）を有効化**：Firebase Console → Authentication → Sign-in method で
+      「メール / パスワード」を有効化し、**「メールリンク（パスワードなしでログイン）」を ON**。
+      認可ドメインは既存（`localhost` / `*.pages.dev` / 後日 `meatup.love`）でカバー。
+      コードは実装済み（`src/lib/auth.ts` の `sendEmailSignInLink`/`completeEmailLinkSignIn`、招待画面のUI）。
+      ※ リンクは「送信したブラウザ」と別で開いても、完了画面でメール再入力すれば成立する設計。
+      アプリ内ブラウザは検知して「外部ブラウザで開く」を案内（強制はOS仕様上不可）。
 - [ ] Cloudflare を **git 連携**にして push 自動デプロイ化（今は手動 wrangler）。その際は
       Pages ダッシュボードで `NEXT_PUBLIC_FIREBASE_*`（ビルド時）と `FIREBASE_PROJECT_ID`（関数）を設定
 - [ ] 独自ドメイン `meatup.love` 接続＋apex ルーティング（ハブ `deploy/` の責務）

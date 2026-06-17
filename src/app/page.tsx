@@ -29,6 +29,14 @@ export default function Home() {
       <p className="mt-8 text-[12px] text-ink-soft">
         歴代 meatup：2018 / 2019 summer …
       </p>
+
+      {/* Discreet host entry — the page is access-gated (UI + Firestore rules). */}
+      <Link
+        href="/admin"
+        className="mt-1 text-[11px] text-ink-soft/50 transition-colors hover:text-ink-soft"
+      >
+        主催者ページ
+      </Link>
     </main>
   );
 }

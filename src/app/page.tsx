@@ -23,6 +23,12 @@ const CAL_URL =
     ].join("\n"),
   );
 
+// X (Twitter) post intent, pre-filled with the 2026 hashtag — like 2019's button.
+const TWEET_URL =
+  "https://twitter.com/intent/tweet?text=" +
+  encodeURIComponent("お肉、食べようぜ！🍖🍻🎉 meatup 2026夏は 7/25(土)！") +
+  "&hashtags=meatup2026";
+
 export default function Home() {
   return (
     <>
@@ -82,6 +88,15 @@ export default function Home() {
           チケットを見る
         </Link>
       </div>
+
+      <a
+        href={TWEET_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn mt-1"
+      >
+        🐦 #meatup2026 でつぶやく
+      </a>
 
       {/* Past editions. URLs are the current Pages deploys; they become
           2018.meatup.love / 2019-summer.meatup.love once the apex is connected. */}

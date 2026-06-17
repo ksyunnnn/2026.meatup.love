@@ -29,6 +29,11 @@ const TWEET_URL =
   encodeURIComponent("お肉、食べようぜ！🍖🍻🎉 meatup 2026夏は 7/25(土)！") +
   "&hashtags=meatup2026";
 
+// Secondary "chip" action: emoji as icon, thin meat outline — lighter than the
+// primary CTAs (filled / 2px ink) but more present than a bare text link.
+const chip =
+  "inline-flex items-center gap-1.5 rounded-pill border border-meat px-4 py-1.5 text-[14px] text-meat transition-colors hover:bg-meat/5";
+
 export default function Home() {
   return (
     <>
@@ -69,17 +74,11 @@ export default function Home() {
             EAT TOKYO JAKUZURE
           </a>
         </p>
-        <p>
-          <a
-            href={CAL_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[13px] underline-offset-2 hover:underline"
-          >
-            📅 カレンダーに追加
-          </a>
-        </p>
       </div>
+
+      <a href={CAL_URL} target="_blank" rel="noopener noreferrer" className={chip}>
+        📅 カレンダーに追加
+      </a>
 
       <div className="mt-4 flex w-full max-w-[320px] flex-col gap-3">
         <Link className="btn btn--primary btn--block" href="/invite">
@@ -90,12 +89,7 @@ export default function Home() {
         </Link>
       </div>
 
-      <a
-        href={TWEET_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 text-[13px] underline-offset-2 hover:underline"
-      >
+      <a href={TWEET_URL} target="_blank" rel="noopener noreferrer" className={chip}>
         🐦 #meatup2026 でつぶやく
       </a>
 

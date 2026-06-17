@@ -19,6 +19,15 @@ const STATUS_LABEL: Record<AttendeeStatus, string> = {
   rejected: '却下',
 }
 
+// "What are you looking forward to" — keys map to the register form chips.
+const EXP_EMOJI: Record<string, string> = {
+  meat: '🍖',
+  drink: '🍺',
+  play: '🎧',
+  connect: '🤝',
+}
+const EXP_ORDER = ['meat', 'drink', 'play', 'connect']
+
 const wrapCls = 'mx-auto grid max-w-[560px] gap-6 px-4 pb-6 pt-[calc(1.5rem_+_env(safe-area-inset-top))]'
 const sectionCls = 'grid gap-3'
 const h2Cls = 'text-[18px] font-extrabold'
@@ -148,6 +157,10 @@ export default function AdminPage() {
 
   const pending = attendees.filter((a) => a.status === 'pending')
   const paidCount = attendees.filter((a) => a.paid).length
+  const expCounts = EXP_ORDER.map((k) => ({
+    emoji: EXP_EMOJI[k],
+    n: attendees.filter((a) => a.expectations?.includes(k)).length,
+  }))
 
   // Referral source, derived from the invite link they used (no manual input):
   // host-issued → "主催者の招待", attendee-issued → "◯◯ さんの招待", none → "飛び込み".
@@ -234,6 +247,11 @@ export default function AdminPage() {
         <h2 className={h2Cls}>
           参加者一覧（{attendees.length}・支払い済み {paidCount}）
         </h2>
+        {attendees.length > 0 && (
+          <p className="text-[12px] text-ink-soft">
+            楽しみ：{expCounts.map((c) => `${c.emoji}${c.n}`).join('　')}
+          </p>
+        )}
         {attendees.length === 0 ? (
           <p className={emptyCls}>まだいません。</p>
         ) : (
@@ -243,6 +261,11 @@ export default function AdminPage() {
                 <span className="min-w-0">
                   {a.name}
                   {a.job ? `（${a.job}${a.jobOther ? `／${a.jobOther}` : ''}）` : ''}
+                  {a.expectations?.length ? (
+                    <span className={subCls}>
+                      {a.expectations.map((k) => EXP_EMOJI[k] ?? '').join('')}
+                    </span>
+                  ) : null}
                   <span className={subCls}>{referral(a)}</span>
                 </span>
                 <span className="ml-auto flex items-center gap-2 whitespace-nowrap">

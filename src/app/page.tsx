@@ -126,14 +126,11 @@ export default function Home() {
         <p className="mt-4 text-[14px] text-ink-soft">
           こんな人、ゆる募してます🙌 ピンと来たら気軽に声かけて〜
         </p>
-        <ul className="mt-5 grid gap-2.5 text-left">
+        <ul className="mx-auto mt-5 grid max-w-[290px] gap-3 text-[15px]">
           {WANTED.map((w) => (
-            <li
-              key={w.label}
-              className="flex items-center gap-3 rounded-[12px] border-2 border-meat/30 bg-paper px-4 py-3 text-[15px] font-bold"
-            >
-              <span className="text-[22px]">{w.emoji}</span>
-              {w.label}
+            <li key={w.label} className="flex items-center justify-center gap-2">
+              <span className="text-[20px]">{w.emoji}</span>
+              <span className="font-bold">{w.label}</span>
             </li>
           ))}
         </ul>

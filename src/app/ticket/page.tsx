@@ -165,20 +165,23 @@ export default function TicketPage() {
 
       <section className="w-full max-w-[360px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
         <h2 className="text-[16px] font-extrabold">参加費</h2>
-        <p className="mt-1 text-[26px] font-extrabold text-meat">
-          {FEE.regular.toLocaleString()}円
-        </p>
-        <div className="mt-3 rounded-[10px] border border-meat/30 bg-cream p-3">
-          <p className="text-[14px] font-bold text-meat">🉐 事前PayPayがおトク＆ラク</p>
-          <p className="mt-1 text-[13px]">
-            〜{FEE.earlyDeadline}は {FEE.early.toLocaleString()}円
-          </p>
-          <p className="mt-2 text-[13px] text-ink-soft">
-            事前決済はPayPayで受け付けます。「事前で！」って連絡くれたら、その場で受け取りリンクを送るね🙏
-          </p>
+        <div className="mt-3 flex items-start justify-center gap-8">
+          <div>
+            <p className="text-[12px] text-ink-soft">通常 / 当日</p>
+            <p className="text-[24px] font-extrabold text-meat">
+              {FEE.regular.toLocaleString()}円
+            </p>
+          </div>
+          <div>
+            <p className="text-[12px] text-ink-soft">事前PayPay</p>
+            <p className="text-[24px] font-extrabold text-meat">
+              {FEE.early.toLocaleString()}円
+            </p>
+            <p className="text-[11px] text-ink-soft">〜{FEE.earlyDeadline}</p>
+          </div>
         </div>
         <p className="mt-3 text-[13px] text-ink-soft">
-          当日は PayPay か 現金（{FEE.regular.toLocaleString()}円）でもOK。
+          事前PayPayは「事前で！」って連絡くれたら受け取りリンク送るね🙏／当日は現金もOK。
         </p>
         <p className="mt-3 text-[14px]">連絡はこちらから 👇</p>
         <a

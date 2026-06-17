@@ -6,9 +6,12 @@
 現場では使わず“盛り上げ”用）。親ハブ `meatup`（歴代開催回を横断管理）配下の独立リポジトリ。
 
 ## スタック
-- Next.js 16 (App Router) / React 19 / TypeScript（公式 create-next-app 準拠、Tailwind なし）
-- `output:'export'`（純静的）。スタイルは CSS Modules＋`globals.css` トークン、見出しは `next/font/local`
-- Firebase（Auth: Google / Firestore）— client SDK 中心。認可は `firestore.rules` で強制
+- Next.js 16 (App Router) / React 19 / TypeScript（公式 create-next-app 準拠）
+- `output:'export'`（純静的）。スタイル＝**Tailwind v4（ゼロランタイム）**。ブランドトークンは
+  `globals.css` の `@theme`（真実の源）、ベース/プリミティブは `@layer base`/`@layer components`
+  に配置（unlayered だとユーティリティに勝ってしまうため必須）。見出しは `next/font/local`
+- Firebase（Auth: **Google / GitHub / メールリンク（パスワードレス）** / Firestore）— client SDK 中心。
+  認可は `firestore.rules` で強制
 - ホスティング＝**Cloudflare Pages**（本番稼働中）。個別チケット OGP は **Cloudflare Pages Functions**（`functions/`）
 
 ## コマンド

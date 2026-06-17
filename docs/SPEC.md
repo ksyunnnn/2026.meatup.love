@@ -76,7 +76,8 @@
 
 - コピー調整パス：細かい言い回し全般、2019 の砕けたトーン（例「はよ参加登録させてくれ」）の反映。
   文言は `src/content/copy.ts` 等に集約して一括編集できるようにする案。
-- デザイン／スタイリング（現状は素の最小スタイル、Tailwind なし）。
+- ~~デザイン／スタイリング~~ → **実装済**：Tailwind v4 全面採用（CSS Modules 全廃）。トークンは
+  `@theme`、base/primitives は `@layer`。トップは招待カード風の固定赤枠。OG 画像のみ未（デザイン確定後）。
 - ~~**個別チケット OGP**~~ → **機構は実装済み（`style-and-ogp` ブランチ）**。Cloudflare Pages
   Function（`functions/t/[id].js`＝OGメタ、`functions/og/[id].js`＝1200×630 PNG）を `workers-og`
   で実装。日本語名はフォント部分集合で描画。公開投影 `shares/{uid}`（name／ticketNo のみ・world-read）
@@ -91,8 +92,9 @@
 
 - URL 方式：**サブドメイン**（各回 `<id>.meatup.love`、apex は最新回 or 端境期メタサイト）。
 - バックエンド：**Firebase**（Supabase はスリープのため不採用）。
-- フロント：**Next.js 16**（公式手順準拠、Tailwind なし＝意図的差分）。
-- 認証：簡単な認証のみ。**Google 主役 / GitHub 任意 / メールリンクは保険（後回し）**。重い認可は持たない。
+- フロント：**Next.js 16**（公式手順準拠）。~~Tailwind なし~~ → **Tailwind v4 を採用**（編集容易性
+  優先で方針変更。ゼロランタイムで `output:'export'` と両立、`@layer` でユーティリティ優先を担保）。
+- 認証：簡単な認証のみ。**Google 主役 / GitHub 任意 / メールリンク（パスワードレス）＝実装＆本番有効化済み**。重い認可は持たない。
 - **事実（実機確認 2026-06）**：Google サインインは LINE・Instagram の in-app ブラウザで動作する。当初の「WebView は Google が一律拒否」は過度な一般化につき撤回。
 - **in-app ブラウザの UX 対策 = A（外部ブラウザで開く導線）を採用**：常用ブラウザの既存ログインに乗せて入力を削減（RFC 8252／LINE は `openExternalBrowser=1`）。今は OAuth は `signInWithPopup` を継続し、方式の最適化は本番ドメイン確定後の実機検証でまとめて判断。
 - チケットは現場非使用＝盛り上げ用。

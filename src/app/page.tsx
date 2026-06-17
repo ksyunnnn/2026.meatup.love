@@ -85,13 +85,12 @@ export default function Home() {
 
       <TweetChip />
 
-      {/* Past editions. URLs are the current Pages deploys; they become
-          2018.meatup.love / 2019-summer.meatup.love once the apex is connected. */}
+      {/* Past editions on their permanent subdomains (live since the apex was connected). */}
       <div className="mt-8 grid gap-1.5 text-[12px] text-ink-soft">
         <p>
           歴代 meatup：
           <a
-            href="https://meatup-2018.pages.dev"
+            href="https://2018.meatup.love"
             target="_blank"
             rel="noopener noreferrer"
             className="text-meat underline-offset-2 hover:underline"
@@ -100,7 +99,7 @@ export default function Home() {
           </a>
           {" / "}
           <a
-            href="https://meatup-2019-summer.pages.dev"
+            href="https://2019-summer.meatup.love"
             target="_blank"
             rel="noopener noreferrer"
             className="text-meat underline-offset-2 hover:underline"

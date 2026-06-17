@@ -15,7 +15,8 @@
   - 認可ドメイン: `localhost` / `*.firebaseapp.com` / `*.web.app` / `meatup-2026.pages.dev` / **`meatup.love`**
   - 管理者: `admins/rc9hmkk3M6dbpPfL8h6rhb9bi8h1`（オーナー本人）
 - OG: デフォルト画像 `public/og.png`（`og:image`＝`https://meatup.love/og.png`）＋ 個別チケット OG 関数
-  `functions/og/[id].js`・`t/[id].js`（`FIREBASE_PROJECT_ID=meatup-2026`）。生成は `scripts/og/`。
+  `functions/og/[id].js`・`t/[id].js`（`FIREBASE_PROJECT_ID=meatup-2026`）。デフォルト画像生成は `scripts/og/`。
+  個別OGは `shares/{uid}`（`name`/`ticketNo`/`role`/`expectations`）を読んで動的描画（QR=`qrcode-generator`）。
 
 ## 実装状況（主な機能）
 - スタイル: Tailwind v4。トークンは `globals.css` の `@theme`。
@@ -30,7 +31,10 @@
 - 招待/登録: 主催発行＝自動確定 / 確定者発行（FR9・1人3枚）＝pending→主催承認。紹介元は自動追跡。
   - 登録フォーム: 名前／**何が楽しみ？（複数選択 expectations）**／**職業（6カテゴリ単一＋その他自由入力）**／性別。必須。
   - **既登録者の再登録は不可**（ルールが ticketNo 上書きを拒否）→ invite/register で先回りして /ticket へ。
-- チケット: 券面＋シェア（個別OG）＋**参加費**（通常5,000/事前4,500・並列表示・記載のみ）。
+- チケット: **券面＝OG が同一意匠**の横長ボーディングパス（`src/components/ticket-card.tsx` と
+  `functions/og/[id].js`）。GUEST／肩書き／名前／日時・会場フッター／半券(oniku＋**QR**＋No.)＋
+  「楽しみ」選択を一字にした**透かし**（肉/麦/遊/繋）。状態(確定/受付)は券外表示。詳細は `DESIGN.md §3`。
+- チケット: 上記の券＋シェア＋**参加費**（通常5,000/事前4,500・並列表示・記載のみ）。
   事前決済は**オンデマンド**（PayPay の受け取りリンク/QR は失効するため静的に貼らない＝
   「連絡くれたら都度リンク送る」）。連絡＝LINE(主)＋IG/Twitter。確定者は招待発行枠。
 - admin: 承認、招待発行、**支払い管理（✓払った トグル＋支払い済みカウント）**、
@@ -43,6 +47,9 @@ npm run build           # .env.local の実 meatup-2026 キーを埋め込む（
 npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-dirty=true
 ```
 - ルール変更時: `npx firebase deploy --only firestore:rules --project meatup-2026`
+- ⚠ **チケット刷新の初回は順序厳守**：`shares` に `role`/`expectations` を書くため、**先に firestore:rules を
+  デプロイ**してから `out/` を公開する。古いルールのままだと登録時の `shares` 書き込みが拒否され**登録が失敗**する。
+  既存登録者の `shares` には新フィールドが無いので、その個別OGは名前＋No.のみのフォールバック（新規からフル表示）。
 - ⚠ **ビルド後に必ず再ビルドしてからデプロイ**（編集後に古い `out/` を出さない）。
 - カスタムドメイン割当は REST API で可（pages:write）。ただし **DNS 作成は zone:edit が要る**ので
   ダッシュボード操作（今回オーナーが CNAME 3本追加済み）。詳細はハブ `deploy/cloudflare-runbook.md`。

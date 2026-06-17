@@ -22,8 +22,9 @@ export function escapeHtml(s) {
 /**
  * Fetch the public projection shares/{id} via the Firestore REST API
  * (unauthenticated; allowed by the `shares` security rule).
- * @returns {Promise<{name: string, ticketNo: string} | null>} null if the
- *   server is unconfigured or the doc is missing.
+ * @returns {Promise<{name: string, ticketNo: string, role: string,
+ *   expectations: string[]} | null>} null if the server is unconfigured or the
+ *   doc is missing.
  */
 export async function fetchShare(env, id) {
   const project = env.FIREBASE_PROJECT_ID
@@ -33,8 +34,13 @@ export async function fetchShare(env, id) {
   const res = await fetch(url)
   if (!res.ok) return null
   const fields = (await res.json()).fields || {}
+  const expectations = (fields.expectations?.arrayValue?.values || [])
+    .map((v) => v.stringValue)
+    .filter(Boolean)
   return {
     name: fields.name?.stringValue || '',
     ticketNo: fields.ticketNo?.stringValue || '',
+    role: fields.role?.stringValue || '',
+    expectations,
   }
 }

@@ -188,6 +188,31 @@ describe('shares (public OG projection)', () => {
     await assertSucceeds(updateDoc(doc(u1, 'shares/u1'), { name: 'A2' }))
     await assertFails(updateDoc(doc(u1, 'shares/u1'), { ticketNo: 'Z' }))
   })
+
+  it('allows role + expectations (the ticket-art fields)', async () => {
+    const u1 = testEnv.authenticatedContext('u1').firestore()
+    await assertSucceeds(
+      setDoc(doc(u1, 'shares/u1'), {
+        name: 'A',
+        ticketNo: 'X',
+        edition: '2026',
+        role: 'エンジニア',
+        expectations: ['meat', 'drink'],
+      }),
+    )
+  })
+
+  it('rejects fields outside the allow-list (e.g. gender)', async () => {
+    const u1 = testEnv.authenticatedContext('u1').firestore()
+    await assertFails(
+      setDoc(doc(u1, 'shares/u1'), {
+        name: 'A',
+        ticketNo: 'X',
+        edition: '2026',
+        gender: '男',
+      }),
+    )
+  })
 })
 
 describe('admins', () => {

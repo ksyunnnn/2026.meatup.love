@@ -55,6 +55,16 @@
 
 要件：チケット共有時に**1人ずつ名前入り**の画像をプレビュー表示。$0（Blaze 不使用）。
 
+- **券面＝OG は「同じ一枚」**：サイトに出る券（`src/components/ticket-card.tsx`）と、シェアで拡散される
+  OG画像（`functions/og/[id].js`）を**同一意匠**にして所有感を出す（Vercel Ship 式）。横長ボーディング
+  パス：本券（meatupワードマーク／GUESTバッジ／肩書き／名前／日時・会場フッター）＋ もぎり線 ＋ 半券
+  （oniku／QR／TICKET No.）。サイト側は **container-query 単位(cqw)** で 1080px設計を任意幅へ等比縮小。
+- **動的要素**：肩書き(`role`)と、「何が楽しみ？」の選択を一字に割り当てた**透かし**（肉/麦/遊/繋＝
+  `expectationChars`）で1枚ずつ違う絵に。状態(確定/受付)は**OGに載せない**（1年immutableキャッシュで
+  凍結するため。サイトの券外にのみ表示）。
+- **QR**：半券に共有URL `…/t/{uid}` の QR（`qrcode-generator`→自前SVG、ink on cream）。拡散先で
+  スキャン→イベントへ、の導線。サイト/関数で同じ生成（`src/lib/qr.ts`／`functions/_lib/qr.js`、要同期）。
+
 - **なぜエッジ必須**：クローラは JS を実行しない＝OG メタ/画像はサーバ HTML に無いと効かない。
   個別＝動的レンダリング。Firebase Hosting で動的は Cloud Functions＝Blaze で NFR1 違反 → 不採用。
   出典: https://ogp.me/ , https://firebase.google.com/docs/firestore/use-rest-api
@@ -67,11 +77,15 @@
   バンドルが異なり動かない）。HTML 文字列を渡せる。
   出典: https://github.com/kvnang/workers-og
 - **日本語フォント**：Satori は字形を持つフォントが無いと豆腐になる。`loadGoogleFont({family:'Noto Sans
-  JP', text})` で**描画する字だけを部分集合**取得（数 KB）。フル同梱は Free のスクリプト上限 3MiB を圧迫
-  するため避ける。出典: https://developers.cloudflare.com/workers/platform/limits/
-- **データ取得（未認証）**：公開投影 `shares/{uid}`（name と ticketNo のみ）を匿名 Firestore REST で取得。
-  ルールで `read: if true` / 本人 write / フィールド限定。機微な attendee 本体は出さない。
-  出典: https://firebase.google.com/docs/firestore/use-rest-api
+  JP', text})` で**描画する字だけを部分集合**取得（数 KB）。ワードマーク/日付は `Righteous`（英字表示用）を
+  別途読む。フル同梱は Free のスクリプト上限 3MiB を圧迫するため避ける。
+  出典: https://developers.cloudflare.com/workers/platform/limits/
+- **アセット**：oniku は静的 `/oniku.svg` を取得して data URL 化、pin は関数内インラインSVG。Satori は
+  inline SVG が不安定なため画像は **`<img>`(data URL)** で渡す。ルート div は **明示px幅**にしないと内容幅へ
+  縮んで中央寄せが効かない（実機で確認・修正済み）。
+- **データ取得（未認証）**：公開投影 `shares/{uid}`（`name`/`ticketNo`/`role`/`expectations` のみ）を匿名
+  Firestore REST で取得。ルールで `read: if true` / 本人 write / フィールド限定。**gender や attendee 本体
+  などの機微は出さない**。出典: https://firebase.google.com/docs/firestore/use-rest-api
 - **キャッシュ**：PNG は `public, immutable, max-age=31536000`（発行時に確定）。HTML は短め。
 
 ## 4. 自己レビューで実機確認したこと（エミュレータ＋wrangler）

@@ -86,6 +86,9 @@
   html {
     /* Keep the brand palette stable in social in-app browsers. */
     -webkit-text-size-adjust: 100%;
+    /* Paint the root cream too, so iOS Safari's safe-area / dynamic-toolbar gap
+       (below the frame) shows the page colour instead of white/leaked content. */
+    background: var(--cream);
   }
 
   body {

@@ -28,13 +28,13 @@ const CAL_URL =
 export default function Home() {
   return (
     <>
-      {/* Fixed invitation-card frame (2018-style red border): stays put on the
-          viewport while content scrolls. pointer-events-none so it never blocks. */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 border-[12px] border-meat"
-      />
-      <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-4 pt-[calc(3rem_+_env(safe-area-inset-top))] pb-[calc(3rem_+_env(safe-area-inset-bottom))] text-center">
+      {/* Invitation-card red frame. The border lives on <main> (an in-flow box
+          that holds the content) — never position:fixed — so content can't leak
+          out past it. Sized with min-h-lvh (large viewport = toolbar hidden) and
+          painted cream so it reaches the true bottom on iOS Safari instead of
+          stopping short of the dynamic toolbar and exposing content in the gap.
+          Pairs with viewport-fit=cover + the cream html/body background. */}
+      <main className="flex min-h-lvh flex-col items-center justify-center gap-4 border-[12px] border-meat bg-cream px-4 pt-[calc(3rem_+_env(safe-area-inset-top))] pb-[calc(3rem_+_env(safe-area-inset-bottom))] text-center">
       <BounceOniku className="h-[92px] w-[92px]" />
 
       <h1 className="font-[family-name:var(--font-display)] text-[clamp(56px,22vw,104px)] leading-[0.9] tracking-[0.02em] text-ink">

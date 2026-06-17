@@ -6,8 +6,8 @@ name = "meatup-2026"
 pages_build_output_dir = "out"
 compatibility_date = "2024-11-01"
 
-# Production value is set in the Cloudflare Pages dashboard (Settings > Vars).
-# For local `wrangler pages dev`, override via .dev.vars (gitignored) to point
-# at the Firestore emulator.
+# Production project the OG/share functions read from (public shares/{id}).
+# For local `wrangler pages dev`, .dev.vars (gitignored) overrides this to the
+# Firestore emulator (demo-meatup + FIRESTORE_BASE_URL).
 [vars]
-FIREBASE_PROJECT_ID = "demo-meatup"
+FIREBASE_PROJECT_ID = "meatup-2026"

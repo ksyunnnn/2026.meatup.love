@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "demo-meatup"
+    "default": "demo-meatup",
+    "prod": "meatup-2026"
   }
 }

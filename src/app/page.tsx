@@ -33,9 +33,9 @@ const headCls =
 // People we're looking for. Hero's the headline; this is the next thing we
 // want eyes on, so it sits right under the fold.
 const WANTED = [
-  { emoji: "🎧", label: "DJ やってくれるひと" },
-  { emoji: "🍸", label: "スナック・バー やってくれるひと" },
-  { emoji: "🛠", label: "運営 手伝ってくれるひと" },
+  { emoji: "🎧", label: "DJやってくれる人" },
+  { emoji: "🍸", label: "スナック・バーやってくれる人" },
+  { emoji: "🛠", label: "運営ちょい手伝ってくれる人" },
 ];
 
 function SectionHead({ children }: { children: React.ReactNode }) {
@@ -124,7 +124,7 @@ export default function Home() {
           Wanted <span className="align-middle">🙋</span>
         </SectionHead>
         <p className="mt-4 text-[14px] text-ink-soft">
-          一緒に作ってくれる人、募集中！ピンと来たら連絡して。
+          こんな人、ゆる募してます🙌 ピンと来たら気軽に声かけて〜
         </p>
         <ul className="mt-5 grid gap-2.5 text-left">
           {WANTED.map((w) => (
@@ -138,7 +138,7 @@ export default function Home() {
           ))}
         </ul>
         <p className="mt-5 flex flex-wrap items-center justify-center gap-x-1 text-[13px] text-ink-soft">
-          やりたい / 気になる人は →
+          やりたい！気になる！って人は →
           <a
             href={CONTACTS.instagram}
             target="_blank"

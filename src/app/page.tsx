@@ -32,7 +32,7 @@ export default function Home() {
           viewport while content scrolls. pointer-events-none so it never blocks. */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-50 border-[12px] border-meat"
+        className="pointer-events-none fixed inset-0 -z-10 border-[12px] border-meat"
       />
       <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-4 pt-[calc(3rem_+_env(safe-area-inset-top))] pb-[calc(3rem_+_env(safe-area-inset-bottom))] text-center">
       <BounceOniku className="h-[92px] w-[92px]" />

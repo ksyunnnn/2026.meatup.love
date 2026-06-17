@@ -14,8 +14,35 @@ export default function Home() {
         2026
       </span>
 
-      <p className="mt-2 text-[18px] font-bold">お肉でつながる、あの会。</p>
-      <p className="text-[14px] text-ink-soft">日時・場所は調整中。続報を待て🔥</p>
+      <p className="mt-2 text-[20px] font-bold">お肉、食べようぜ！🍖</p>
+
+      <div className="grid gap-1.5 text-[15px]">
+        <p>📅 2026.07.25（土）</p>
+        <p>
+          ⏰ 11:00 open 〜 19:00 close{" "}
+          <span className="text-[12px] text-ink-soft">（時間は仮）</span>
+        </p>
+        <p>
+          📍{" "}
+          <a
+            href="https://goo.gl/maps/NX273kTyHT5NrSvF8"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-2 hover:underline"
+          >
+            EAT TOKYO JAKUZURE
+          </a>
+        </p>
+      </div>
+
+      <a
+        href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=meatup+2026&dates=20260725T110000/20260725T190000&ctz=Asia/Tokyo&location=EAT+TOKYO+JAKUZURE+%E6%9D%B1%E4%BA%AC%E9%83%BD%E7%9B%AE%E9%BB%92%E5%8C%BA%E4%B8%8A%E7%9B%AE%E9%BB%925-30-12&details=%E3%81%8A%E8%82%89%E3%80%81%E9%A3%9F%E3%81%B9%E3%82%88%E3%81%86%EF%BC%81%F0%9F%8D%96"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn--block max-w-[320px]"
+      >
+        📅 カレンダーに追加
+      </a>
 
       <div className="mt-4 flex w-full max-w-[320px] flex-col gap-3">
         <Link className="btn btn--primary btn--block" href="/invite">

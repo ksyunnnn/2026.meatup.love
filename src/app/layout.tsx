@@ -14,11 +14,12 @@ const righteous = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://meatup.love"),
-  title: "meatup 2026",
-  description: "お肉でつながる、あの会。meatup 2026 🍖",
+  title: { default: "MEATUP2026", template: "%s ｜ MEATUP2026" },
+  description: "お肉、食べようぜ！🍖",
   openGraph: {
-    title: "meatup 2026",
-    description: "お肉でつながる、あの会。meatup 2026 🍖",
+    title: "MEATUP2026",
+    description: "お肉、食べようぜ！🍖",
+    siteName: "meatup",
     type: "website",
     locale: "ja_JP",
   },

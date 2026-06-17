@@ -1,7 +1,7 @@
 # 現状と引き継ぎ（2026-06-17 時点）
 
-作業ブランチ: **`style-and-ogp`**。本番(Pages/Firebase)はこのブランチのビルドを wrangler で
-直接デプロイした状態が反映済み。ただし **origin 未push・main 未マージ**（マージはデザイン確定後でOK）。CI 緑。
+ブランチ: `main` ＝ `style-and-ogp` ＝ `origin`（すべて `7f7fc8f`・**push／マージ済み**）。
+本番(Pages/Firebase)はこのコードのビルドが反映済み。CI 緑。今後は `main` で作業。
 
 ## 本番（稼働中）
 - サイト: **https://meatup-2026.pages.dev**（Cloudflare Pages、プロジェクト名 `meatup-2026`）
@@ -44,7 +44,6 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - [ ] **実機の通し確認**（オーナー手動）：招待発行(/admin) → リンク → サインイン（**メール認証含む**）→
       登録 → チケット → 「シェア」で OGP プレビュー → /admin で確認/承認。
 - [ ] **OG 画像**（共有プレビュー画像）をデザイン確定後に作成し `og:image` 設定（現状未設定）。
-- [ ] **git push（`origin/style-and-ogp`）＋ `main` マージ**（本番はブランチビルドを直接デプロイ中・origin 未反映）。
 - [ ] Cloudflare **git 連携**で push 自動デプロイ化（任意・今は手動 wrangler）。その際 Pages に
       `NEXT_PUBLIC_FIREBASE_*`（ビルド時）と `FIREBASE_PROJECT_ID`（関数）を設定。
 - [ ] GitHub 認証プロバイダ（任意・github.com で OAuth App 作成）。

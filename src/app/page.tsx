@@ -53,9 +53,41 @@ export default function Home() {
         </Link>
       </div>
 
-      <p className="mt-8 text-[12px] text-ink-soft">
-        歴代 meatup：2018 / 2019 summer …
-      </p>
+      {/* Past editions. URLs are the current Pages deploys; they become
+          2018.meatup.love / 2019-summer.meatup.love once the apex is connected. */}
+      <div className="mt-8 grid gap-1.5 text-[12px] text-ink-soft">
+        <p>
+          歴代 meatup：
+          <a
+            href="https://meatup-2018.pages.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-meat underline-offset-2 hover:underline"
+          >
+            2018
+          </a>
+          {" / "}
+          <a
+            href="https://meatup-2019-summer.pages.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-meat underline-offset-2 hover:underline"
+          >
+            2019 summer
+          </a>
+        </p>
+        <p>
+          過去の開催の様子 →{" "}
+          <a
+            href="https://twitter.com/hashtag/meatup2019"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-meat underline-offset-2 hover:underline"
+          >
+            #meatup2019
+          </a>
+        </p>
+      </div>
 
       {/* Discreet host entry — the page is access-gated (UI + Firestore rules). */}
       <Link

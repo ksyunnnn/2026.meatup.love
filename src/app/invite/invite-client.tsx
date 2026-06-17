@@ -3,7 +3,6 @@
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { signInWithGoogle, signInWithGithub } from '@/lib/auth'
-import styles from './invite.module.css'
 
 export default function InviteClient() {
   const searchParams = useSearchParams()
@@ -21,19 +20,19 @@ export default function InviteClient() {
   }
 
   return (
-    <main className={styles.wrap}>
-      <div className={`card ${styles.card}`}>
-        <div className={styles.emoji}>🍖</div>
-        <h1 className={styles.title}>
-          ようこそ{name ? <>、<span className={styles.name}>{name}</span> さん</> : ''}
+    <main className="flex min-h-dvh items-center justify-center px-4 py-6">
+      <div className="card flex w-full max-w-[380px] flex-col gap-4 text-center">
+        <div className="text-[48px] leading-none">🍖</div>
+        <h1 className="text-[24px] font-extrabold">
+          ようこそ{name ? <>、<span className="text-meat">{name}</span> さん</> : ''}
         </h1>
-        <p className={styles.lead}>meatup 2026 への招待です。サインインして参加に進みます。</p>
+        <p className="text-[15px] text-ink-soft">meatup 2026 への招待です。サインインして参加に進みます。</p>
 
         {loading ? (
-          <p className={styles.lead}>読み込み中…</p>
+          <p className="text-[15px] text-ink-soft">読み込み中…</p>
         ) : user ? (
-          <div className={styles.actions}>
-            <p className={styles.signedin}>
+          <div className="mt-2 flex flex-col gap-3">
+            <p className="text-[14px] text-ink-soft">
               サインイン済み：{user.displayName ?? user.email ?? user.uid}
             </p>
             <button className="btn btn--primary btn--block" onClick={proceedToRegister}>
@@ -41,7 +40,7 @@ export default function InviteClient() {
             </button>
           </div>
         ) : (
-          <div className={styles.actions}>
+          <div className="mt-2 flex flex-col gap-3">
             <button
               className="btn btn--primary btn--block"
               onClick={() => void signInWithGoogle().catch(console.error)}

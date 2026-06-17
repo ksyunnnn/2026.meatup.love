@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { createAttendee } from '@/lib/attendees'
-import styles from './register.module.css'
+
+const inputCls =
+  'w-full min-h-12 rounded-[8px] border-2 border-line bg-white px-4 py-3 text-ink focus:border-meat focus:outline-none'
 
 export default function RegisterClient() {
   const searchParams = useSearchParams()
@@ -50,42 +52,46 @@ export default function RegisterClient() {
   }
 
   if (loading || !user) {
-    return <main className={styles.wrap}>読み込み中…</main>
+    return <main className="flex min-h-dvh items-center justify-center px-4 py-6">読み込み中…</main>
   }
 
   return (
-    <main className={styles.wrap}>
-      <div className={`card ${styles.card}`}>
-        <h1 className={styles.title}>参加する 🍖</h1>
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.field}>
-            <span className={styles.label}>名前（編集可）</span>
+    <main className="flex min-h-dvh items-center justify-center px-4 py-6">
+      <div className="card w-full max-w-[400px]">
+        <h1 className="mb-6 text-[24px] font-extrabold">参加する 🍖</h1>
+        <form onSubmit={handleSubmit} className="grid gap-6">
+          <label className="grid gap-2">
+            <span className="text-[15px] font-bold">名前（編集可）</span>
             <input
-              className={styles.input}
+              className={inputCls}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
           </label>
-          <label className={styles.field}>
-            <span className={styles.label}>何してるひと？（任意）</span>
+          <label className="grid gap-2">
+            <span className="text-[15px] font-bold">何してるひと？（任意）</span>
             <input
-              className={styles.input}
+              className={inputCls}
               value={job}
               onChange={(e) => setJob(e.target.value)}
             />
           </label>
-          <fieldset className={styles.field} style={{ border: 'none' }}>
-            <span className={styles.label}>どっち？（任意）</span>
-            <div className={styles.radios}>
+          <fieldset className="grid gap-2 border-0">
+            <span className="text-[15px] font-bold">どっち？（任意）</span>
+            <div className="flex gap-2">
               {['男', '女', 'その他'].map((option) => (
-                <label key={option} className={styles.radio}>
+                <label
+                  key={option}
+                  className="flex min-h-12 flex-1 cursor-pointer select-none items-center justify-center gap-2 rounded-[8px] border-2 border-line font-semibold has-[:checked]:border-meat has-[:checked]:bg-cream has-[:checked]:text-meat"
+                >
                   <input
                     type="radio"
                     name="gender"
                     value={option}
                     checked={gender === option}
                     onChange={(e) => setGender(e.target.value)}
+                    className="accent-meat"
                   />
                   {option}
                 </label>
@@ -95,7 +101,7 @@ export default function RegisterClient() {
           <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
             {submitting ? '送信中…' : '参加する → チケットへ'}
           </button>
-          {error && <p className={styles.error}>{error}</p>}
+          {error && <p className="text-[14px] text-meat-dark">{error}</p>}
         </form>
       </div>
     </main>

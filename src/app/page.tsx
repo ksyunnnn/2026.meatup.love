@@ -1,5 +1,28 @@
 import Link from "next/link";
 
+// Google Calendar "add event" link, built at render (static) time so the
+// multibyte title/body are encoded safely. Body keeps 2019's casual tone.
+const CAL_URL =
+  "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+  "&text=" +
+  encodeURIComponent("🍖MEATUP2026夏") +
+  "&dates=20260725T110000/20260725T190000&ctz=Asia/Tokyo" +
+  "&location=" +
+  encodeURIComponent("EAT TOKYO JAKUZURE 東京都目黒区上目黒5-30-12") +
+  "&details=" +
+  encodeURIComponent(
+    [
+      "お肉、食べようぜ！🍖",
+      "ゆる〜くお肉を囲む meatup、2026 夏に帰ってきます。",
+      "",
+      "📅 2026.07.25（土）⏰ 11:00 〜 19:00（時間は仮）",
+      "📍 EAT TOKYO JAKUZURE（東京都目黒区上目黒5-30-12）",
+      "",
+      "中身はこれから！音楽やったり、肉焼いたり、ゆるく交流する会です🍻",
+      "続報＆参加登録は meatup.love で。 #meatup2026",
+    ].join("\n"),
+  );
+
 export default function Home() {
   return (
     <>
@@ -43,7 +66,7 @@ export default function Home() {
       </div>
 
       <a
-        href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=meatup+2026&dates=20260725T110000/20260725T190000&ctz=Asia/Tokyo&location=EAT+TOKYO+JAKUZURE+%E6%9D%B1%E4%BA%AC%E9%83%BD%E7%9B%AE%E9%BB%92%E5%8C%BA%E4%B8%8A%E7%9B%AE%E9%BB%925-30-12&details=%E3%81%8A%E8%82%89%E3%80%81%E9%A3%9F%E3%81%B9%E3%82%88%E3%81%86%EF%BC%81%F0%9F%8D%96"
+        href={CAL_URL}
         target="_blank"
         rel="noopener noreferrer"
         className="btn btn--block max-w-[320px]"

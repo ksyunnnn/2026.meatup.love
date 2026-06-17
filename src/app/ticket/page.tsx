@@ -7,7 +7,7 @@ import { getMyAttendee } from '@/lib/attendees'
 import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
 import type { Attendee } from '@/lib/types'
 import { CONTACTS, PAYPAY_URL, FEE } from '@/lib/contacts'
-import { LineIcon } from '@/components/icons'
+import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
 
 const wrapCls =
   'flex min-h-dvh flex-col items-center justify-center gap-4 px-4 pt-[calc(1.5rem_+_env(safe-area-inset-top))] pb-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
@@ -184,7 +184,7 @@ export default function TicketPage() {
         <p className="mt-3 text-[13px] text-ink-soft">
           当日は PayPay か 現金でもOK。
         </p>
-        <p className="mt-2 text-[14px]">払ったら LINE でひとこと連絡ちょうだい🙏</p>
+        <p className="mt-2 text-[14px]">払ったら、ひとこと連絡ちょうだい🙏</p>
         <a
           href={CONTACTS.line}
           target="_blank"
@@ -194,6 +194,27 @@ export default function TicketPage() {
           <LineIcon className="h-[18px] w-[18px]" />
           LINEで連絡する
         </a>
+        <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1 text-[12px] text-ink-soft">
+          他でもOK →
+          <a
+            href={CONTACTS.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram で連絡"
+            className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
+          >
+            <InstagramIcon className="h-[22px] w-[22px]" />
+          </a>
+          <a
+            href={CONTACTS.twitter}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Twitter で連絡"
+            className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
+          >
+            <TwitterIcon className="h-[22px] w-[22px]" />
+          </a>
+        </p>
       </section>
 
       {confirmed && (

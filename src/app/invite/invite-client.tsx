@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
+import { Oniku } from '@/components/oniku'
 import {
   signInWithGoogle,
   signInWithGithub,
@@ -63,7 +64,7 @@ export default function InviteClient() {
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-6">
       <div className="card flex w-full max-w-[380px] flex-col gap-4 text-center">
-        <div className="text-[48px] leading-none">🍖</div>
+        <Oniku className="mx-auto h-[60px] w-[60px]" />
         <h1 className="text-[24px] font-extrabold">
           ようこそ{name ? <>、<span className="text-meat">{name}</span> さん</> : ''}
         </h1>

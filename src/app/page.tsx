@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { BounceOniku } from "@/components/bounce-oniku";
+import { TweetChip } from "@/components/tweet-chip";
 
 // Google Calendar "add event" link, built at render (static) time so the
 // multibyte title/body are encoded safely. Body keeps 2019's casual tone.
@@ -15,24 +17,13 @@ const CAL_URL =
       "お肉、食べようぜ！🍖",
       "ゆる〜くお肉を囲む meatup、2026 夏に帰ってきます。",
       "",
-      "📅 2026.07.25（土）⏰ 11:00 〜 19:00（時間は仮）",
+      "📅 2026.07.25（土）⏰ 11:00 〜 19:00",
       "📍 EAT TOKYO JAKUZURE（東京都目黒区上目黒5-30-12）",
       "",
       "中身はこれから！音楽やったり、肉焼いたり、ゆるく交流する会です🍻",
       "続報＆参加登録は meatup.love で。 #meatup2026",
     ].join("\n"),
   );
-
-// X (Twitter) post intent, pre-filled with the 2026 hashtag — like 2019's button.
-const TWEET_URL =
-  "https://twitter.com/intent/tweet?text=" +
-  encodeURIComponent("お肉、食べようぜ！🍖🍻🎉 meatup 2026夏は 7/25(土)！") +
-  "&hashtags=meatup2026";
-
-// Secondary "chip" action: emoji as icon, thin meat outline — lighter than the
-// primary CTAs (filled / 2px ink) but more present than a bare text link.
-const chip =
-  "inline-flex items-center gap-1.5 rounded-pill border border-meat px-4 py-1.5 text-[14px] text-meat transition-colors hover:bg-meat/5";
 
 export default function Home() {
   return (
@@ -44,9 +35,7 @@ export default function Home() {
         className="pointer-events-none fixed inset-0 z-50 border-[12px] border-meat"
       />
       <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-4 pt-[calc(3rem_+_env(safe-area-inset-top))] pb-[calc(3rem_+_env(safe-area-inset-bottom))] text-center">
-      <div className="text-[72px] leading-none drop-shadow-[0_6px_10px_rgba(126,0,29,0.25)]">
-        🍖
-      </div>
+      <BounceOniku className="h-[92px] w-[92px]" />
 
       <h1 className="font-[family-name:var(--font-display)] text-[clamp(56px,22vw,104px)] leading-[0.9] tracking-[0.02em] text-ink">
         meat<span className="text-meat">up</span>
@@ -55,21 +44,18 @@ export default function Home() {
         2026
       </span>
 
-      <p className="mt-2 text-[20px] font-bold">お肉、食べようぜ！🍖</p>
+      <p className="mt-2 text-[20px] font-bold">お肉、食べようぜ！🍺</p>
 
       <div className="grid gap-1.5 text-[15px]">
         <p>📅 2026.07.25（土）</p>
-        <p>
-          ⏰ 11:00 open 〜 19:00 close{" "}
-          <span className="text-[12px] text-ink-soft">（時間は仮）</span>
-        </p>
+        <p>⏰ 11:00 open 〜 19:00 close</p>
         <p>
           📍{" "}
           <a
             href="https://goo.gl/maps/NX273kTyHT5NrSvF8"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline-offset-2 hover:underline"
+            className="font-bold underline-offset-2 hover:underline"
           >
             EAT TOKYO JAKUZURE
           </a>
@@ -95,9 +81,7 @@ export default function Home() {
         </Link>
       </div>
 
-      <a href={TWEET_URL} target="_blank" rel="noopener noreferrer" className={chip}>
-        🐦 #meatup2026 でつぶやく
-      </a>
+      <TweetChip />
 
       {/* Past editions. URLs are the current Pages deploys; they become
           2018.meatup.love / 2019-summer.meatup.love once the apex is connected. */}

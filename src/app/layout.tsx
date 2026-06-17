@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import "animate.css/animate.min.css";
 
 // Self-hosted display font (no build-time network dependency → durable, NFR3).
 // Latin subset only; Japanese body text uses the system stack (see globals.css).
@@ -22,8 +23,14 @@ export const metadata: Metadata = {
     siteName: "meatup",
     type: "website",
     locale: "ja_JP",
+    // Static share image (1200x630). Resolves against metadataBase → an absolute
+    // https://meatup.love/og.png once the apex is connected (the pending deploy
+    // task). Built by scripts/og — see that dir to regenerate.
+    images: [
+      { url: "/og.png", width: 1200, height: 630, alt: "meatup 2026 ｜ 2026.07.25 SAT" },
+    ],
   },
-  twitter: { card: "summary_large_image" },
+  twitter: { card: "summary_large_image", images: ["/og.png"] },
 };
 
 export const viewport: Viewport = {

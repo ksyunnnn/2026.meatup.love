@@ -8,13 +8,38 @@ import { createAttendee, getMyAttendee } from '@/lib/attendees'
 const inputCls =
   'w-full min-h-12 rounded-[8px] border-2 border-line bg-white px-4 py-3 text-ink focus:border-meat focus:outline-none'
 
+// Selectable "chip": a bordered label that turns meat-coloured when its input is
+// checked (works for both checkbox and radio). Same look as the gender choices.
+const chipCls =
+  'flex min-h-12 cursor-pointer select-none items-center justify-center gap-1.5 rounded-[8px] border-2 border-line px-3 font-semibold has-[:checked]:border-meat has-[:checked]:bg-cream has-[:checked]:text-meat'
+
+// What people want from the event (multi-select). Stable keys for aggregation.
+const EXPECTATIONS = [
+  { key: 'meat', emoji: '🍖', label: '肉' },
+  { key: 'drink', emoji: '🍺', label: '酒' },
+  { key: 'play', emoji: '🎧', label: '遊び' },
+  { key: 'connect', emoji: '🤝', label: '繋がり' },
+]
+
+// Coarse job buckets (single-select) — kept broad so counts stay meaningful.
+const JOBS = [
+  { value: 'エンジニア', emoji: '🧑‍💻' },
+  { value: 'クリエイティブ', emoji: '🎨' },
+  { value: 'ビジネス', emoji: '📈' },
+  { value: '経営・フリーランス', emoji: '🧑‍💼' },
+  { value: '学生', emoji: '🎓' },
+  { value: 'その他', emoji: '🙂' },
+]
+
 export default function RegisterClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, loading } = useAuth()
   const token = searchParams.get('t') ?? ''
   const [name, setName] = useState(searchParams.get('name') ?? '')
+  const [expectations, setExpectations] = useState<string[]>([])
   const [job, setJob] = useState('')
+  const [jobOther, setJobOther] = useState('')
   const [gender, setGender] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -52,6 +77,10 @@ export default function RegisterClient() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!user) return
+    if (expectations.length === 0) {
+      setError('楽しみなやつ、ひとつは選んでね🙏')
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
@@ -59,14 +88,16 @@ export default function RegisterClient() {
         uid: user.uid,
         authName: user.email ?? user.displayName ?? user.uid,
         name,
+        expectations,
         job: job || undefined,
+        jobOther: job === 'その他' ? jobOther.trim() || undefined : undefined,
         gender: gender || undefined,
         inviteToken: token || undefined,
       })
       router.push('/ticket')
     } catch (err) {
       console.error(err)
-      setError('うまく登録できませんでした。すでに登録済みの場合はチケットをご確認ください。少し時間をおいて再度お試しください。')
+      setError('うまくいかなかった…！もう登録済みならチケット見てみて。ちょっと時間おいて、またやってみてね🙏')
       setSubmitting(false)
     }
   }
@@ -89,15 +120,56 @@ export default function RegisterClient() {
               required
             />
           </label>
-          <label className="grid gap-2">
+          <fieldset className="grid gap-2 border-0">
+            <span className="text-[15px] font-bold">何が楽しみ？（複数OK）</span>
+            <div className="grid grid-cols-2 gap-2">
+              {EXPECTATIONS.map((opt) => (
+                <label key={opt.key} className={chipCls}>
+                  <input
+                    type="checkbox"
+                    value={opt.key}
+                    checked={expectations.includes(opt.key)}
+                    onChange={(e) =>
+                      setExpectations((prev) =>
+                        e.target.checked
+                          ? [...prev, opt.key]
+                          : prev.filter((k) => k !== opt.key),
+                      )
+                    }
+                    className="accent-meat"
+                  />
+                  {opt.emoji} {opt.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="grid gap-2 border-0">
             <span className="text-[15px] font-bold">何してるひと？</span>
-            <input
-              className={inputCls}
-              value={job}
-              onChange={(e) => setJob(e.target.value)}
-              required
-            />
-          </label>
+            <div className="grid grid-cols-2 gap-2">
+              {JOBS.map((opt) => (
+                <label key={opt.value} className={chipCls}>
+                  <input
+                    type="radio"
+                    name="job"
+                    value={opt.value}
+                    checked={job === opt.value}
+                    onChange={(e) => setJob(e.target.value)}
+                    className="accent-meat"
+                    required
+                  />
+                  {opt.emoji} {opt.value}
+                </label>
+              ))}
+            </div>
+            {job === 'その他' && (
+              <input
+                className={inputCls}
+                value={jobOther}
+                onChange={(e) => setJobOther(e.target.value)}
+                placeholder="ざっくりでOK！"
+              />
+            )}
+          </fieldset>
           <fieldset className="grid gap-2 border-0">
             <span className="text-[15px] font-bold">どっち？</span>
             <div className="flex gap-2">

@@ -6,8 +6,10 @@ export type AttendeeStatus = 'pending' | 'approved' | 'rejected'
 export interface Attendee {
   authName: string // identity from the auth provider (source of truth for "who")
   name: string // display name; prefilled from invite ?name=, editable by the guest
-  job?: string // optional
-  gender?: string // optional
+  job?: string // one of the fixed job categories (for aggregation)
+  jobOther?: string // free text, only when job === 'その他'
+  gender?: string // 男 / 女 / その他
+  expectations?: string[] // what they want from the event: meat / drink / play / connect
   status: AttendeeStatus
   ticketNo?: string // short code, e.g. "MU-2026-7Q3K"; issued at registration
   edition: string // e.g. "2026"

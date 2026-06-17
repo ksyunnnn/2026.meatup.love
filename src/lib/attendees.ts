@@ -21,7 +21,9 @@ export interface CreateAttendeeInput {
   authName: string
   name: string
   job?: string
+  jobOther?: string
   gender?: string
+  expectations?: string[]
   inviteToken?: string
 }
 
@@ -68,7 +70,10 @@ export async function createAttendee(input: CreateAttendeeInput) {
       createdAt: serverTimestamp(),
     }
     if (input.job) data.job = input.job
+    if (input.jobOther) data.jobOther = input.jobOther
     if (input.gender) data.gender = input.gender
+    if (input.expectations && input.expectations.length > 0)
+      data.expectations = input.expectations
     if (input.inviteToken) {
       data.inviteToken = input.inviteToken
       data.invitedAs = input.name

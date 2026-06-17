@@ -107,6 +107,14 @@ export async function listAttendees(): Promise<AttendeeWithId[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Attendee) }))
 }
 
+/** Host marks payment as received (after confirming PayPay/cash off-app). */
+export async function setPaid(uid: string, paid: boolean) {
+  await updateDoc(doc(db, 'attendees', uid), {
+    paid,
+    ...(paid ? { paidAt: serverTimestamp() } : {}),
+  })
+}
+
 /** Host confirmation: pending → approved (UberEats-style "確認しました"). */
 export async function approveAttendee(uid: string, adminUid: string) {
   await updateDoc(doc(db, 'attendees', uid), {

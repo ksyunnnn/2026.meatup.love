@@ -10,6 +10,8 @@ export interface Attendee {
   jobOther?: string // free text, only when job === 'その他'
   gender?: string // 男 / 女 / その他
   expectations?: string[] // what they want from the event: meat / drink / play / connect
+  paid?: boolean // host marks this once payment is confirmed (off-app, via PayPay/cash)
+  paidAt?: Timestamp
   status: AttendeeStatus
   ticketNo?: string // short code, e.g. "MU-2026-7Q3K"; issued at registration
   edition: string // e.g. "2026"

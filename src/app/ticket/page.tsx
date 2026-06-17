@@ -6,6 +6,8 @@ import { useAuth } from '@/lib/use-auth'
 import { getMyAttendee } from '@/lib/attendees'
 import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
 import type { Attendee } from '@/lib/types'
+import { CONTACTS, PAYPAY_URL, FEE } from '@/lib/contacts'
+import { LineIcon } from '@/components/icons'
 
 const wrapCls =
   'flex min-h-dvh flex-col items-center justify-center gap-4 px-4 pt-[calc(1.5rem_+_env(safe-area-inset-top))] pb-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
@@ -160,6 +162,39 @@ export default function TicketPage() {
           トップへ
         </Link>
       </div>
+
+      <section className="w-full max-w-[360px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
+        <h2 className="text-[16px] font-extrabold">参加費</h2>
+        <p className="mt-1 text-[26px] font-extrabold text-meat">
+          {FEE.regular.toLocaleString()}円
+        </p>
+        <p className="text-[13px] text-ink-soft">
+          🉐 {FEE.earlyDeadline}までの事前PayPayなら {FEE.early.toLocaleString()}円
+        </p>
+        {PAYPAY_URL && (
+          <a
+            href={PAYPAY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn--primary btn--block mt-3"
+          >
+            PayPayで事前に払う
+          </a>
+        )}
+        <p className="mt-3 text-[13px] text-ink-soft">
+          当日は PayPay か 現金でもOK。
+        </p>
+        <p className="mt-2 text-[14px]">払ったら LINE でひとこと連絡ちょうだい🙏</p>
+        <a
+          href={CONTACTS.line}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn--block mt-2 inline-flex items-center justify-center gap-2"
+        >
+          <LineIcon className="h-[18px] w-[18px]" />
+          LINEで連絡する
+        </a>
+      </section>
 
       {confirmed && (
         <section className="w-full max-w-[360px]">

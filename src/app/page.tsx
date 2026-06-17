@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { BounceOniku } from "@/components/bounce-oniku";
 import { TweetChip } from "@/components/tweet-chip";
+import { CONTACTS } from "@/lib/contacts";
+import { InstagramIcon, TwitterIcon } from "@/components/icons";
 
 // Google Calendar "add event" link, built at render (static) time so the
 // multibyte title/body are encoded safely. Body keeps 2019's casual tone.
@@ -55,7 +57,7 @@ export default function Home() {
             href="https://goo.gl/maps/NX273kTyHT5NrSvF8"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-bold underline-offset-2 hover:underline"
+            className="font-bold underline underline-offset-2"
           >
             EAT TOKYO JAKUZURE
           </a>
@@ -115,6 +117,27 @@ export default function Home() {
             className="text-meat underline-offset-2 hover:underline"
           >
             #meatup2019
+          </a>
+        </p>
+        <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1 text-[12px] text-ink-soft">
+          わからんことあったら気軽にDM →
+          <a
+            href={CONTACTS.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram で連絡"
+            className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
+          >
+            <InstagramIcon className="h-[22px] w-[22px]" />
+          </a>
+          <a
+            href={CONTACTS.twitter}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Twitter で連絡"
+            className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
+          >
+            <TwitterIcon className="h-[22px] w-[22px]" />
           </a>
         </p>
       </div>

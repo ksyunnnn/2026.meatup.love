@@ -7,6 +7,7 @@ import {
   isAdmin,
   listAttendees,
   approveAttendee,
+  setPaid,
   type AttendeeWithId,
 } from '@/lib/attendees'
 import { createInvite, listInvites, type InviteWithToken } from '@/lib/invites'
@@ -84,6 +85,19 @@ export default function AdminPage() {
     }
   }
 
+  async function handleTogglePaid(uid: string, paid: boolean) {
+    if (!user) return
+    setBusy(uid)
+    try {
+      await setPaid(uid, paid)
+      setAttendees((prev) => prev.map((p) => (p.id === uid ? { ...p, paid } : p)))
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   async function handleCreateInvite(e: React.FormEvent) {
     e.preventDefault()
     if (!user) return
@@ -133,6 +147,7 @@ export default function AdminPage() {
   }
 
   const pending = attendees.filter((a) => a.status === 'pending')
+  const paidCount = attendees.filter((a) => a.paid).length
 
   // Referral source, derived from the invite link they used (no manual input):
   // host-issued → "主催者の招待", attendee-issued → "◯◯ さんの招待", none → "飛び込み".
@@ -216,7 +231,9 @@ export default function AdminPage() {
       </section>
 
       <section className={sectionCls}>
-        <h2 className={h2Cls}>参加者一覧（{attendees.length}）</h2>
+        <h2 className={h2Cls}>
+          参加者一覧（{attendees.length}・支払い済み {paidCount}）
+        </h2>
         {attendees.length === 0 ? (
           <p className={emptyCls}>まだいません。</p>
         ) : (
@@ -225,10 +242,23 @@ export default function AdminPage() {
               <li key={a.id} className={rowCls}>
                 <span className="min-w-0">
                   {a.name}
-                  {a.job ? `（${a.job}）` : ''}
+                  {a.job ? `（${a.job}${a.jobOther ? `／${a.jobOther}` : ''}）` : ''}
                   <span className={subCls}>{referral(a)}</span>
                 </span>
-                <span className="ml-auto whitespace-nowrap text-[12px] text-ink-soft">{STATUS_LABEL[a.status]}</span>
+                <span className="ml-auto flex items-center gap-2 whitespace-nowrap">
+                  <span className="text-[12px] text-ink-soft">{STATUS_LABEL[a.status]}</span>
+                  <button
+                    className={`${btnSm} rounded-pill border-2 text-[12px] ${
+                      a.paid
+                        ? 'border-meat bg-meat text-white'
+                        : 'border-line text-ink-soft'
+                    }`}
+                    onClick={() => handleTogglePaid(a.id, !a.paid)}
+                    disabled={busy === a.id}
+                  >
+                    {a.paid ? '✓ 払った' : '未払い'}
+                  </button>
+                </span>
               </li>
             ))}
           </ul>

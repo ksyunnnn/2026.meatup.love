@@ -173,15 +173,14 @@ export default function TicketPage() {
             </p>
           </div>
           <div>
-            <p className="text-[12px] text-ink-soft">事前PayPay</p>
+            <p className="text-[12px] text-ink-soft">事前決済</p>
             <p className="text-[24px] font-extrabold text-meat">
               {FEE.early.toLocaleString()}円
             </p>
-            <p className="text-[11px] text-ink-soft">〜{FEE.earlyDeadline}</p>
           </div>
         </div>
         <p className="mt-3 text-[13px] text-ink-soft">
-          事前PayPayは「事前で！」って連絡くれたら受け取りリンク送るね🙏／当日は現金もOK。
+          事前決済（PayPay）は2週間前まで受け付けるよ。「事前で！」って連絡くれたら受け取りリンク送るね🙏／当日は現金もOK。
         </p>
         <p className="mt-3 text-[14px]">連絡はこちらから 👇</p>
         <a

@@ -49,7 +49,7 @@ function SectionHead({ children }: { children: React.ReactNode }) {
 
 function UnderConstruction({ title, note }: { title: string; note: string }) {
   return (
-    <section className="w-full max-w-[440px] px-6 py-12 text-center">
+    <section className="w-full max-w-[440px] px-6 py-16 text-center">
       <SectionHead>{title}</SectionHead>
       <p className="mt-4">
         <span className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-paper px-4 py-1.5 text-[13px] font-bold text-ink-soft">
@@ -118,8 +118,14 @@ export default function Home() {
         <TweetChip />
       </section>
 
+      {/* ── ABOUT（さらっと・セクション扱いにしない軽い導入） ── */}
+      <section className="w-full max-w-[420px] px-6 py-24 text-center text-[15px] leading-snug text-ink-soft">
+        <p>肉を通してわいがや交流するイベントです✌</p>
+        <p className="mt-1.5">バーベキュー + 料理と酒だすよ！あとなんかいろいろ！</p>
+      </section>
+
       {/* ── WANTED （Hero の次に重要） ── */}
-      <section className="w-full max-w-[440px] px-6 py-12 text-center">
+      <section className="w-full max-w-[440px] px-6 py-16 text-center">
         <SectionHead>
           Wanted <span className="align-middle">🙋</span>
         </SectionHead>

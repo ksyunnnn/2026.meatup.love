@@ -74,11 +74,17 @@ export default function Home() {
             EAT TOKYO JAKUZURE
           </a>
         </p>
+        <p>
+          <a
+            href={CAL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] underline-offset-2 hover:underline"
+          >
+            📅 カレンダーに追加
+          </a>
+        </p>
       </div>
-
-      <a href={CAL_URL} target="_blank" rel="noopener noreferrer" className={chip}>
-        📅 カレンダーに追加
-      </a>
 
       <div className="mt-4 flex w-full max-w-[320px] flex-col gap-3">
         <Link className="btn btn--primary btn--block" href="/invite">

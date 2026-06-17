@@ -8,7 +8,6 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app'
 import {
   getAuth,
   GoogleAuthProvider,
-  GithubAuthProvider,
   connectAuthEmulator,
   type Auth,
 } from 'firebase/auth'
@@ -33,9 +32,8 @@ const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseCon
 export const auth: Auth = getAuth(app)
 export const db: Firestore = getFirestore(app)
 
-// Auth providers (FR1: Google / GitHub / email link).
+// Auth providers (FR1: Google / email link).
 export const googleProvider = new GoogleAuthProvider()
-export const githubProvider = new GithubAuthProvider()
 
 // Route Auth/Firestore to local emulators when explicitly enabled in dev.
 // Guard against duplicate connections during Fast Refresh.

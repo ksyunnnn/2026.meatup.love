@@ -1,4 +1,4 @@
-// Auth helpers (FR1). Google / GitHub via popup; email = passwordless link.
+// Auth helpers (FR1). Google via popup; email = passwordless link.
 import {
   signInWithPopup,
   signOut,
@@ -6,16 +6,12 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from 'firebase/auth'
-import { auth, googleProvider, githubProvider } from './firebase'
+import { auth, googleProvider } from './firebase'
 
 const EMAIL_KEY = 'emailForSignIn'
 
 export function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider)
-}
-
-export function signInWithGithub() {
-  return signInWithPopup(auth, githubProvider)
 }
 
 export function signOutUser() {

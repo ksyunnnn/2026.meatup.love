@@ -8,7 +8,6 @@ import { getMyAttendee } from '@/lib/attendees'
 import type { Attendee } from '@/lib/types'
 import {
   signInWithGoogle,
-  signInWithGithub,
   sendEmailSignInLink,
   completeEmailLinkSignIn,
   isInAppBrowser,
@@ -136,12 +135,6 @@ export default function InviteClient() {
               onClick={() => void signInWithGoogle().catch(console.error)}
             >
               Google でサインイン
-            </button>
-            <button
-              className="btn btn--block"
-              onClick={() => void signInWithGithub().catch(console.error)}
-            >
-              GitHub でサインイン
             </button>
 
             <div className="flex items-center gap-3 text-[12px] text-ink-soft">

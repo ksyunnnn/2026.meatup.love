@@ -110,9 +110,9 @@ export default function InviteClient() {
                 </p>
                 <button
                   className="btn btn--primary btn--block"
-                  onClick={() => router.push('/ticket')}
+                  onClick={() => router.push('/mypage')}
                 >
-                  チケットを見る →
+                  マイページへ →
                 </button>
               </>
             ) : (

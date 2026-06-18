@@ -194,4 +194,28 @@
     color: var(--ink-soft);
     font-size: 13px;
   }
+
+  /* Ticket "reveal" entrance — the /ticket screen is an emotional moment, not a
+     utility, so the card eases in to build a little anticipation. */
+  .ticket-reveal {
+    animation: ticket-reveal 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
+@keyframes ticket-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Respect reduced-motion (WCAG 2.3.3): show the ticket instantly, no entrance. */
+@media (prefers-reduced-motion: reduce) {
+  .ticket-reveal {
+    animation: none;
+  }
 }

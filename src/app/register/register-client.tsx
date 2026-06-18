@@ -63,7 +63,7 @@ export default function RegisterClient() {
     getMyAttendee(user.uid)
       .then((a) => {
         if (!active) return
-        if (a) router.replace('/ticket')
+        if (a) router.replace('/mypage')
         else setChecking(false)
       })
       .catch(() => {
@@ -94,7 +94,7 @@ export default function RegisterClient() {
         gender: gender || undefined,
         inviteToken: token || undefined,
       })
-      router.push('/ticket')
+      router.push('/mypage')
     } catch (err) {
       console.error(err)
       setError('うまくいかなかった…！もう登録済みならチケット見てみて。ちょっと時間おいて、またやってみてね🙏')

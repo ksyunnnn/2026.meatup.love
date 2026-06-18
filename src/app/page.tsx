@@ -110,8 +110,8 @@ export default function Home() {
           <Link className="btn btn--primary btn--block" href="/invite">
             招待された方はこちら →
           </Link>
-          <Link className="btn btn--block" href="/ticket">
-            チケットを見る
+          <Link className="btn btn--block" href="/mypage">
+            参加状況・チケット
           </Link>
         </div>
 

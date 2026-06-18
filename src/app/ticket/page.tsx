@@ -1,62 +1,20 @@
 'use client'
-
-import { useEffect, useState } from 'react'
+// The ticket "reveal" — an emotional moment, not a utility screen. Just the
+// personalized ticket (it eases in) and a share action at the peak. All the
+// practical stuff (status, payment, invites, contact) lives on /mypage.
 import Link from 'next/link'
-import { useAuth } from '@/lib/use-auth'
-import { getMyAttendee } from '@/lib/attendees'
+import { useState } from 'react'
+import { useMyAttendee } from '@/lib/use-my-attendee'
 import { displayRole, expectationChars } from '@/lib/ticket'
-import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
-import type { Attendee } from '@/lib/types'
-import { CONTACTS, FEE } from '@/lib/contacts'
-import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
 import TicketCard from '@/components/ticket-card'
+import { ShareIcon } from '@/components/icons'
 
 const wrapCls =
-  'flex min-h-dvh flex-col items-center justify-center gap-4 px-4 pt-[calc(1.5rem_+_env(safe-area-inset-top))] pb-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
-
-function inviteUrl(inv: InviteWithToken): string {
-  const qs = new URLSearchParams()
-  if (inv.name) qs.set('name', inv.name)
-  qs.set('t', inv.token)
-  return `${window.location.origin}/invite?${qs.toString()}`
-}
+  'flex min-h-dvh flex-col items-center justify-center gap-5 px-4 pt-[calc(1.25rem_+_env(safe-area-inset-top))] pb-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
 
 export default function TicketPage() {
-  const { user, loading } = useAuth()
-  const [attendee, setAttendee] = useState<Attendee | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const { user, loading, attendee, loaded } = useMyAttendee()
   const [copied, setCopied] = useState(false)
-
-  // FR9: invite slots for confirmed attendees.
-  const [myInvites, setMyInvites] = useState<InviteWithToken[]>([])
-  const [inviteName, setInviteName] = useState('')
-  const [issuing, setIssuing] = useState(false)
-  const [copiedToken, setCopiedToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (loading || !user) return
-    let active = true
-    getMyAttendee(user.uid).then((a) => {
-      if (!active) return
-      setAttendee(a)
-      setLoaded(true)
-    })
-    return () => {
-      active = false
-    }
-  }, [loading, user])
-
-  // Load the attendee's own invites once they are confirmed.
-  useEffect(() => {
-    if (!user || attendee?.status !== 'approved') return
-    let active = true
-    listMyInvites(user.uid).then((list) => {
-      if (active) setMyInvites(list)
-    })
-    return () => {
-      active = false
-    }
-  }, [user, attendee?.status])
 
   async function handleShare() {
     if (!user || !attendee) return
@@ -72,40 +30,16 @@ export default function TicketPage() {
       try {
         await navigator.clipboard.writeText(url)
         setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
       } catch (err) {
         console.error(err)
       }
     }
   }
 
-  async function handleIssueInvite(e: React.FormEvent) {
-    e.preventDefault()
-    if (!user) return
-    setIssuing(true)
-    try {
-      await createInvite(user.uid, inviteName.trim() || undefined)
-      setInviteName('')
-      setMyInvites(await listMyInvites(user.uid))
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIssuing(false)
-    }
-  }
-
-  async function handleCopyInvite(url: string, token: string) {
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopiedToken(token)
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   if (loading || (user && !loaded)) {
     return <main className={wrapCls}>読み込み中…</main>
   }
-
   if (!user) {
     return (
       <main className={wrapCls}>
@@ -116,7 +50,6 @@ export default function TicketPage() {
       </main>
     )
   }
-
   if (!attendee) {
     return (
       <main className={wrapCls}>
@@ -128,147 +61,50 @@ export default function TicketPage() {
     )
   }
 
-  const confirmed = attendee.status === 'approved'
-  const remaining = Math.max(0, INVITE_QUOTA - myInvites.length)
   const role = displayRole(attendee.job, attendee.jobOther)
   const chars = expectationChars(attendee.expectations)
-  const shareUrl = user ? `${window.location.origin}/t/${user.uid}` : ''
+  const shareUrl = `${window.location.origin}/t/${user.uid}`
 
   return (
     <main className={wrapCls}>
-      <TicketCard
-        name={attendee.name}
-        role={role}
-        chars={chars}
-        ticketNo={attendee.ticketNo ?? ''}
-        shareUrl={shareUrl}
-      />
-
-      {/* Status is kept OFF the shareable ticket art (the OG is cached for a
-          year) and shown here for the holder only. */}
-      <span
-        className={
-          'inline-flex items-center gap-1 rounded-pill px-4 py-1 text-[14px] font-bold ' +
-          (confirmed
-            ? 'bg-meat text-white'
-            : 'border border-line bg-cream text-ink-soft')
-        }
-      >
-        {confirmed ? '確定 ✅' : '受付（主催者の確認待ち）'}
-      </span>
-
-      <div className="flex w-full max-w-[540px] flex-col gap-3">
-        <button className="btn btn--primary btn--block" onClick={handleShare}>
-          {copied ? 'リンクをコピーしました ✓' : 'チケットをシェア 🔗'}
-        </button>
-        <Link className="btn btn--block" href="/">
-          トップへ
+      <div className="flex w-full max-w-[540px] items-center justify-between">
+        <Link
+          className="text-[13px] font-bold text-ink-soft underline-offset-2 hover:underline"
+          href="/mypage"
+        >
+          ← マイページ
         </Link>
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label="チケットをシェア"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-meat transition-colors hover:bg-cream active:scale-95"
+        >
+          <ShareIcon className="h-[22px] w-[22px]" />
+        </button>
       </div>
 
-      <section className="w-full max-w-[540px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
-        <h2 className="text-[16px] font-extrabold">参加費</h2>
-        <div className="mt-3 flex items-start justify-center gap-8">
-          <div>
-            <p className="text-[12px] text-ink-soft">通常 / 当日</p>
-            <p className="text-[24px] font-extrabold text-meat">
-              {FEE.regular.toLocaleString()}円
-            </p>
-          </div>
-          <div>
-            <p className="text-[12px] text-ink-soft">事前決済</p>
-            <p className="text-[24px] font-extrabold text-meat">
-              {FEE.early.toLocaleString()}円
-            </p>
-          </div>
+      <div className="ticket-reveal w-full">
+        <div className="mx-auto flex max-w-[540px] justify-center">
+          <TicketCard
+            name={attendee.name}
+            role={role}
+            chars={chars}
+            ticketNo={attendee.ticketNo ?? ''}
+            shareUrl={shareUrl}
+          />
         </div>
-        <p className="mt-3 text-[13px] text-ink-soft">
-          事前決済（PayPay）は2週間前まで受け付けるよ。「事前で！」って連絡くれたら受け取りリンク送るね🙏／当日は現金もOK。
-        </p>
-        <p className="mt-3 text-[14px]">連絡はこちらから 👇</p>
-        <a
-          href={CONTACTS.line}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn--block mt-2 inline-flex items-center justify-center gap-2"
-        >
-          <LineIcon className="h-[18px] w-[18px]" />
-          LINEで連絡する
-        </a>
-        <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1 text-[12px] text-ink-soft">
-          他でもOK →
-          <a
-            href={CONTACTS.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Instagram で連絡"
-            className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
-          >
-            <InstagramIcon className="h-[22px] w-[22px]" />
-          </a>
-          <a
-            href={CONTACTS.twitter}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Twitter で連絡"
-            className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
-          >
-            <TwitterIcon className="h-[22px] w-[22px]" />
-          </a>
-        </p>
-      </section>
+      </div>
 
-      {confirmed && (
-        <section className="w-full max-w-[540px]">
-          <h2 className="mb-1 text-center text-[16px] font-extrabold">
-            招待枠（残り {remaining} / {INVITE_QUOTA}）
-          </h2>
-          <p className="mb-3 text-center text-[12px] text-ink-soft">
-            友達を招待できます。招待された人は主催の確認後に確定します。
-          </p>
-          <form onSubmit={handleIssueInvite} className="mb-3 flex items-center gap-2">
-            <input
-              className="min-h-11 min-w-0 flex-1 rounded-[8px] border-2 border-line bg-white px-3 py-2 text-ink placeholder:text-ink-soft focus:border-meat focus:outline-none"
-              value={inviteName}
-              onChange={(e) => setInviteName(e.target.value)}
-              placeholder="相手の名前（任意）"
-            />
-            <button
-              type="submit"
-              className="btn btn--primary min-h-10 whitespace-nowrap px-4 py-2"
-              disabled={issuing || remaining === 0}
-            >
-              {issuing ? '発行中…' : '発行'}
-            </button>
-          </form>
-          {myInvites.length === 0 ? (
-            <p className="text-center text-[13px] text-ink-soft">まだ招待していません。</p>
-          ) : (
-            <ul className="grid list-none gap-2">
-              {myInvites.map((inv) => (
-                <li
-                  key={inv.token}
-                  className="flex items-center gap-3 rounded-[8px] border border-line bg-paper px-4 py-3"
-                >
-                  <span className="min-w-0">
-                    {inv.name ?? '（名前なし）'}
-                    <span className="ml-2 text-[12px] text-ink-soft">
-                      {inv.usedBy ? '使用済み' : '未使用'}
-                    </span>
-                  </span>
-                  <button
-                    className="btn ml-auto min-h-10 whitespace-nowrap px-4 py-2"
-                    onClick={() => handleCopyInvite(inviteUrl(inv), inv.token)}
-                    disabled={!!inv.usedBy}
-                  >
-                    {copiedToken === inv.token ? 'コピー済み' : 'リンクをコピー'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+      <p
+        className={
+          'text-[13px] font-bold text-ink-soft transition-opacity ' +
+          (copied ? 'opacity-100' : 'opacity-0')
+        }
+        aria-live="polite"
+      >
+        リンクをコピーしました ✓
+      </p>
     </main>
   )
 }

@@ -3,6 +3,28 @@
 > 進行中。スタイルは全棄却の可能性ありとのことなので、判断根拠を残す。
 > すべて `style-and-ogp` ブランチで作業。気に入らなければブランチごと破棄可。
 
+## 0. デザイン判断の軸（迷ったらここ・出典付き）
+
+UI/IA の判断はこの軸で決める（根拠が無いとブレるので固定）。基準は **Apple HIG**（iOS基準だが
+原則として転用）＋ Web固有は **WCAG** 併用。**効く判断ほど、その場でHIG該当節を実取得して裏取り**する
+（HIGは更新が速く、記憶の逐語は当てにしない）。
+
+1. **重要度＝目立ち**。強調するのは最重要の1操作。塗り/色ボタンは1画面に1〜2個まで。
+   > HIG Buttons: "use a button that has a prominent visual style for the most likely action… Keep the number of prominent buttons to one or two per view."
+2. **正直なアフォーダンス**。見た目＝実際の挙動。やらないことをやるように見せない。別アプリ/別画面へ
+   行くなら示す（例：連絡へ遷移するボタンを"即キャンセル"に見せない）。
+   > HIG: "Ensure that each button clearly communicates its purpose." / macOS: 末尾の…は別画面/アプリを開く合図。
+3. **破壊的操作は赤（Destructive）＋確認、主役にしない**。データを壊す時だけ赤。Primaryにしない。
+   > HIG Buttons: "Destructive… can result in data destruction"（system red）/ "Don't assign the primary role to a button that performs a destructive action."
+   - 本アプリのキャンセルは「主催者に連絡」＝破壊的でない → **赤でも単独ボタンでもなく、連絡導線に集約**。
+4. **ラベルは具体的な動詞・予測可能に**。単独の「キャンセル」は避ける（HIGでは Cancel＝"現在の操作の
+   取消" の意味で衝突する）。「参加をキャンセル」等、何が起きるか分かる語に。
+   > HIG Buttons: "Cancel. The button cancels the current action." / Writing: 動詞始まりで具体的に。
+5. **意味でグループ化し、見出し＝中身を一致させる**。1つの箱（カード/画面）に複数の役割を混ぜない。
+   1画面が2役を兼ねるなら、セクションで明示的に分ける（例：/ticket＝券＋会員ホーム → 「参加情報」で区切る）。
+6. **状態で出し分け**。pending/approved 等で「最重要＝最も目立つ」が変わる前提で強弱・露出を変える。
+7. **アクセシビリティ（Web）**：タップ領域 ≥44pt、フォーカス可視、コントラスト（WCAG AA）。
+
 ## 1. 過去サイトから抽出した「meatup の共通アイデンティティ」
 
 `sites/2018`（CRA）と `sites/2019-summer`（Gatsby）を実コード調査して共通項を抽出。
@@ -87,6 +109,30 @@
   Firestore REST で取得。ルールで `read: if true` / 本人 write / フィールド限定。**gender や attendee 本体
   などの機微は出さない**。出典: https://firebase.google.com/docs/firestore/use-rest-api
 - **キャッシュ**：PNG は `public, immutable, max-age=31536000`（発行時に確定）。HTML は短め。
+
+## 3.5 画面構成：実務（マイページ）と情緒（券）の分離
+
+このイベントの券は**実務機能を持たない**（現場で使わない＝盛り上げ用）。主催が要るのは「誰が来る/
+払った」、来る人が要るのは「詳細/払った」だけ。だから券の仕事は**情緒**＝「開いた人をわくわくさせる」。
+この前提から、実務入口を券にすると違和感が出る、という判断で**2面に分けた**：
+
+- **`/mypage`（実務ホーム・ログイン後の着地点）**：状態（承認）＋支払い（`事前決済：未`をソッと）＋
+  日時/場所＋招待（approved）＋連絡・困ったとき（キャンセル/変更も集約）。静かで分かる面。
+- **`/ticket`（情緒のリビール）**：券（全面）＋シェア**だけ**。読み込み時に券がふわっと登場
+  （`.ticket-reveal`）。"見せる/共有する"瞬間に集中。
+- 動線：`/mypage` の「**チケットを見る 🎟**」が券へ誘う唯一の入口。登録/招待後の遷移も `/mypage`。
+  共有リンク `t/[id]` は従来どおり `/ticket` を指す。
+
+判断の根拠（§0の軸＋補足）：
+- **HIG**：ナビとアクションは別物（シェア/招待は画面内アクション、画面分割の理由にしない）。最頻アクション
+  を主役に（/mypage では「券を見る」、/ticket では「シェア」）。共有は square.and.arrow.up の馴染みアイコンで
+  右上に（大きな主役ボタンは券のリビールに対し過剰）。
+- **NN/g**：美的で最小限（券面に実務を盛らない）／システム状態の可視化（状態・支払いを /mypage に）／
+  認識＞記憶（Wallet パスのメンタルモデル）。
+- **情緒の最上段**：Aaron Walter「UX hierarchy of needs」の Pleasurable／Norman の anticipation。券は実務価値
+  ゼロゆえ、"開く"ひと手間が損失ゼロで期待感を生む稀な例。
+- **WCAG**：登場アニメは `prefers-reduced-motion: reduce` で無効化（2.3.3）。向きは固定しない（1.3.4）。
+  スマホは横向きにすると券が上限幅（540px）まで拡大して読みやすい（回転実装はしない判断）。
 
 ## 4. 自己レビューで実機確認したこと（エミュレータ＋wrangler）
 

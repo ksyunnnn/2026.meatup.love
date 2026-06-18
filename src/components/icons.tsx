@@ -19,6 +19,27 @@ export function TwitterIcon({ className }: IconProps) {
   )
 }
 
+// UI glyph (stroke), the familiar iOS-style "share" mark (square.and.arrow.up)
+// — HIG recommends associating share actions with this familiar icon.
+export function ShareIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 14V3" />
+      <path d="M8 6l4-4 4 4" />
+      <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
+    </svg>
+  )
+}
+
 export function LineIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>

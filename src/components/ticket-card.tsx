@@ -3,6 +3,7 @@
 // is sized in container-query width units (cqw) against a 1080px-wide design,
 // so the whole pass scales cleanly to any width while keeping its proportions.
 import { qrDataUrl } from '@/lib/qr'
+import { EVENT } from '@/lib/event'
 
 // px (in the 1080-wide design) → cqw
 const q = (px: number) => `${(px / 10.8).toFixed(3)}cqw`
@@ -23,14 +24,6 @@ export interface TicketCardProps {
   chars?: string[]
   ticketNo: string
   shareUrl: string
-}
-
-// Static event info — mirrors functions/og/[id].js EVENT.
-const EVENT = {
-  date: '2026.07.25 SAT',
-  hours: 'OPEN 11:00 - 19:00',
-  venue: 'EAT TOKYO JAKUZURE',
-  address: '東京都目黒区上目黒5-30-12',
 }
 
 export default function TicketCard({

@@ -9,6 +9,7 @@ import { useMyAttendee } from '@/lib/use-my-attendee'
 import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
 import { EVENT } from '@/lib/event'
 import { FeeSection, ContactSection } from '@/components/member-info'
+import { RetryNotice } from '@/components/load-state'
 
 const wrapCls =
   'flex min-h-dvh flex-col items-center gap-4 px-4 pt-[calc(2rem_+_env(safe-area-inset-top))] pb-[calc(2rem_+_env(safe-area-inset-bottom))]'
@@ -21,7 +22,7 @@ function inviteUrl(inv: InviteWithToken): string {
 }
 
 export default function MyPage() {
-  const { user, loading, attendee, loaded } = useMyAttendee()
+  const { user, loading, attendee, loaded, error } = useMyAttendee()
 
   const [myInvites, setMyInvites] = useState<InviteWithToken[]>([])
   const [inviteName, setInviteName] = useState('')
@@ -31,9 +32,11 @@ export default function MyPage() {
   useEffect(() => {
     if (!user || attendee?.status !== 'approved') return
     let active = true
-    listMyInvites(user.uid).then((list) => {
-      if (active) setMyInvites(list)
-    })
+    listMyInvites(user.uid)
+      .then((list) => {
+        if (active) setMyInvites(list)
+      })
+      .catch((err) => console.warn('[meatup] listMyInvites failed', err))
     return () => {
       active = false
     }
@@ -63,6 +66,9 @@ export default function MyPage() {
     }
   }
 
+  if (error && !loaded) {
+    return <RetryNotice className={wrapCls + ' justify-center'} />
+  }
   if (loading || (user && !loaded)) {
     return <main className={wrapCls + ' justify-center'}>読み込み中…</main>
   }

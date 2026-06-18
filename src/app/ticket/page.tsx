@@ -8,12 +8,13 @@ import { useMyAttendee } from '@/lib/use-my-attendee'
 import { displayRole, expectationChars } from '@/lib/ticket'
 import TicketCard from '@/components/ticket-card'
 import { ShareIcon } from '@/components/icons'
+import { RetryNotice } from '@/components/load-state'
 
 const wrapCls =
   'flex min-h-dvh flex-col items-center justify-center gap-5 px-4 pt-[calc(1.25rem_+_env(safe-area-inset-top))] pb-[calc(1.5rem_+_env(safe-area-inset-bottom))]'
 
 export default function TicketPage() {
-  const { user, loading, attendee, loaded } = useMyAttendee()
+  const { user, loading, attendee, loaded, error } = useMyAttendee()
   const [copied, setCopied] = useState(false)
 
   async function handleShare() {
@@ -37,6 +38,9 @@ export default function TicketPage() {
     }
   }
 
+  if (error && !loaded) {
+    return <RetryNotice className={wrapCls} />
+  }
   if (loading || (user && !loaded)) {
     return <main className={wrapCls}>読み込み中…</main>
   }

@@ -150,7 +150,7 @@ export default function AdminPage() {
   if (!admin) {
     return (
       <main className={wrapCls}>
-        <p>このページは主催者専用です。</p>
+        <p>このページは運営専用です。</p>
       </main>
     )
   }
@@ -163,7 +163,7 @@ export default function AdminPage() {
   }))
 
   // Referral source, derived from the invite link they used (no manual input):
-  // host-issued → "主催者の招待", attendee-issued → "◯◯ さんの招待", none → "飛び込み".
+  // host-issued → "運営の招待", attendee-issued → "◯◯ さんの招待", none → "飛び込み".
   const inviteByToken = new Map(invites.map((i) => [i.token, i]))
   const nameByUid = new Map(attendees.map((a) => [a.id, a.name]))
   function referral(a: AttendeeWithId): string {
@@ -171,7 +171,7 @@ export default function AdminPage() {
     const inv = inviteByToken.get(a.inviteToken)
     if (!inv) return '招待リンク'
     const issuerName = nameByUid.get(inv.issuedBy)
-    return issuerName ? `${issuerName} さんの招待` : '主催者の招待'
+    return issuerName ? `${issuerName} さんの招待` : '運営の招待'
   }
 
   return (

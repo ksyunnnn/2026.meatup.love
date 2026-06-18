@@ -105,8 +105,8 @@ export default function InviteClient() {
               <>
                 <p className="text-[15px] text-ink">
                   {attendee.status === 'approved'
-                    ? 'もう登録済みだよ！参加確定してる 🎉'
-                    : 'もう登録済み！主催の確認待ちだよ'}
+                    ? 'もう登録済みやでい！当日楽しみにしてる 🎉'
+                    : 'もう登録済み！運営から連絡はきた？'}
                 </p>
                 <button
                   className="btn btn--primary btn--block"

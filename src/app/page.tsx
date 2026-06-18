@@ -61,19 +61,51 @@ function UnderConstruction({ title, note }: { title: string; note: string }) {
   );
 }
 
-export default function Home() {
+// One numbered step in "How to Join". Just a small meat badge and the text —
+// no card chrome, so the list stays light and scannable.
+function JoinStep({
+  n,
+  title,
+  children,
+}: {
+  n: number;
+  title: string;
+  children?: React.ReactNode;
+}) {
   return (
-    // Invitation-card red frame on <main> itself (in-flow, never position:fixed)
-    // so it wraps ALL sections and dodges Safari's dynamic-toolbar gap. The page
-    // now scrolls through Hero → Wanted → Schedule/Content/Data → footer.
-    <main className="flex min-h-lvh flex-col items-center border-[12px] border-meat bg-cream pb-[calc(2.5rem_+_env(safe-area-inset-bottom))] text-center">
-      {/* ── HERO ── */}
-      <section className="flex min-h-svh w-full flex-col items-center justify-center gap-4 px-4 pt-[calc(2.5rem_+_env(safe-area-inset-top))]">
+    <li className="flex items-start gap-3 text-left">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-meat text-[13px] font-bold text-white">
+        {n}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-bold leading-snug">{title}</p>
+        {children}
+      </div>
+    </li>
+  );
+}
+
+// Hero block. Reused as the top splash (full-height, <h1>) and — with `compact` —
+// as a closing recap at the very bottom: no min-height, and the wordmark is
+// downgraded from <h1> so the page keeps a single <h1>.
+function Hero({ compact = false }: { compact?: boolean }) {
+  const Heading: "p" | "h1" = compact ? "p" : "h1";
+  return (
+    <section
+      className={
+        "flex w-full flex-col items-center justify-center gap-4 px-4 " +
+        (compact
+          ? "py-20"
+          : "min-h-svh pt-[calc(2.5rem_+_env(safe-area-inset-top))]")
+      }
+    >
+      {/* スプラッシュ（マスコット〜日時）。compact のときは PC で省く＝スクショの部分 */}
+      <div className={"contents" + (compact ? " sm:hidden" : "")}>
         <BounceOniku className="h-[92px] w-[92px]" />
 
-        <h1 className="font-[family-name:var(--font-display)] text-[clamp(56px,22vw,104px)] leading-[0.9] tracking-[0.02em] text-ink">
+        <Heading className="font-[family-name:var(--font-display)] text-[clamp(56px,22vw,104px)] leading-[0.9] tracking-[0.02em] text-ink">
           meat<span className="text-meat">up</span>
-        </h1>
+        </Heading>
         <span className="inline-block -rotate-2 rounded-pill bg-meat px-6 py-0.5 font-[family-name:var(--font-display)] text-[clamp(28px,9vw,44px)] text-white shadow-card">
           2026
         </span>
@@ -105,32 +137,51 @@ export default function Home() {
             </a>
           </p>
         </div>
+      </div>
 
-        <div className="mt-4 flex w-full max-w-[320px] flex-col gap-3">
-          <Link className="btn btn--primary btn--block" href="/invite">
-            招待された方はこちら →
-          </Link>
-          <Link className="btn btn--block" href="/mypage">
-            参加状況・チケット
-          </Link>
-        </div>
+      <div className="mt-4 flex w-full max-w-[320px] flex-col gap-3">
+        <Link className="btn btn--primary btn--block" href="/invite">
+          参加したいひとはこちら
+        </Link>
+        <Link className="btn btn--block" href="/mypage">
+          参加登録済みの方こっち
+        </Link>
+      </div>
 
-        <TweetChip />
-      </section>
+      <TweetChip />
+    </section>
+  );
+}
+
+export default function Home() {
+  return (
+    // Invitation-card red frame on <main> itself (in-flow, never position:fixed)
+    // so it wraps ALL sections and dodges Safari's dynamic-toolbar gap. The page
+    // now scrolls through Hero → Wanted → Schedule/Content/Data → footer.
+    <main className="flex min-h-lvh flex-col items-center border-[12px] border-meat bg-cream pb-[calc(2.5rem_+_env(safe-area-inset-bottom))] text-center">
+      {/* ── HERO（トップ：全画面・h1） ── */}
+      <Hero />
 
       {/* ── ABOUT（さらっと・セクション扱いにしない軽い導入） ── */}
-      <section className="w-full max-w-[420px] px-6 py-24 text-center text-[15px] font-bold leading-snug text-ink-soft">
-        <p>肉を通してわいがや交流するイベントです✌</p>
-        <p className="mt-1.5">バーベキュー + 料理と酒だすよ！あとなんかいろいろ！</p>
+      <section className="w-full max-w-[420px] px-4 py-16 text-left text-[22px] font-bold leading-snug text-ink-soft">
+        <p>お久しぶり！前回からまさかの6年ぶり〜。小学1年生だったあの子ももう中学生！タメになったね〜。</p>
+        
+        <p className="mt-4">来たことある人は全員参加してね。はじめましての人は不安よね、全員参加してね。みんなで肉食お🍖</p>
+        
+        <p className="mt-4">Meatupは肉を通してわいがや交流するイベントです🕺今までたくさんのひとたちに助けてもらいながら開催してきました！</p>
+
+        <p className="mt-4">バーベキュー + 料理と酒だすよ！あとなんかいろいろ！今回もゆるく自由に楽しもうね✌</p>
+
+        <p className="mt-4">お子様連れも歓迎できるようにしたいと思ってます。事前に教えてね！</p>        
       </section>
 
       {/* ── WANTED （Hero の次に重要） ── */}
       <section className="w-full max-w-[440px] px-6 py-16 text-center">
         <SectionHead>
-          Wanted <span className="align-middle">🙋</span>
+          Wanted
         </SectionHead>
-        <p className="mt-4 text-[14px] text-ink-soft">
-          こんな人、ゆる募してます🙌 ピンと来たら気軽に声かけて〜
+        <p className="mt-4 text-[14px] text-ink-soft font-bold">
+          今のところ<span className="underline">運営こばしゅんのみ</span>！誰か助けて😭
         </p>
         <ul className="mx-auto mt-5 grid max-w-[290px] gap-3 text-[15px]">
           {WANTED.map((w) => (
@@ -141,7 +192,7 @@ export default function Home() {
           ))}
         </ul>
         <p className="mt-5 flex flex-wrap items-center justify-center gap-x-1 text-[13px] text-ink-soft">
-          やりたい！気になる！って人は →
+          やりたい！気になる！って人はこばしゅんに連絡を →
           <a
             href={CONTACTS.instagram}
             target="_blank"
@@ -164,14 +215,61 @@ export default function Home() {
       </section>
 
       {/* ── 工事中セクション ── */}
-      <UnderConstruction title="Schedule" note="当日のタイムテーブル、準備中。" />
-      <UnderConstruction title="Content" note="どんな企画があるか、準備中。" />
-      <UnderConstruction title="Data" note="参加者の集計（職業・楽しみ など）、準備中。" />
+      <UnderConstruction title="Schedule" note="当日のタイムテーブルが入る予定" />
+      <UnderConstruction title="Content" note="なんかできるかな〜" />
+      <UnderConstruction title="Data" note="フォームで回答もらったやつをなんかうまくやりたい" />
+
+      <section className="w-full max-w-[440px] px-6 py-16 text-center">
+        <SectionHead>How to Join</SectionHead>
+        <p className="mt-4 text-[14px] text-ink-soft">参加の流れはこんな感じ！</p>
+
+        <ol className="mx-auto mt-6 grid max-w-[360px] list-none gap-5">
+          <JoinStep n={1} title="招待ページから登録！">
+            <Link
+              className="mt-1 inline-block text-[13px] font-bold text-meat underline underline-offset-2"
+              href="/invite"
+            >
+              招待ページへ →
+            </Link>
+          </JoinStep>
+
+          <JoinStep n={2} title="確認と連絡を待つ！">
+            <p className="mt-1 text-[13px] text-ink-soft">
+              運営から招待があった場合はスキップ。2〜3日以内に連絡がなかったら直接連絡ください
+              🙇‍♂️
+            </p>
+          </JoinStep>
+
+          <JoinStep n={3} title="参加費を払う">
+            <p className="mt-1 text-[13px] text-ink-soft">
+              事前決済うれしす！Paypay コード送るよ！当日 5,000円・事前だと 4,500円！
+            </p>
+          </JoinStep>
+
+          <JoinStep n={4} title="予定をカレンダーに追加">
+            <p className="mt-1 text-[13px] text-ink-soft">
+              <a
+                href={CAL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-meat underline underline-offset-2"
+              >
+                📅 カレンダーに追加
+              </a>{" "}
+              で忘れずに〜
+            </p>
+          </JoinStep>
+
+          <JoinStep n={5} title="肉を食う！酒を飲む！交流する！">
+            <p className="mt-1 text-[18px]">🍖🍺🍖🍺🍖🍺</p>
+          </JoinStep>
+        </ol>
+      </section>
 
       {/* ── フッター ── */}
       <footer className="mt-6 grid gap-1.5 px-4 text-[12px] text-ink-soft">
         <p>
-          歴代 meatup：
+          過去 LP：
           <a
             href="https://2018.meatup.love"
             target="_blank"
@@ -191,7 +289,7 @@ export default function Home() {
           </a>
         </p>
         <p>
-          過去の開催の様子 →{" "}
+          前回の開催の様子 →{" "}
           <a
             href="https://twitter.com/hashtag/meatup2019"
             target="_blank"
@@ -202,7 +300,7 @@ export default function Home() {
           </a>
         </p>
         <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1">
-          わからんことあったら気軽にDM →
+          問い合わせ →
           <a
             href={CONTACTS.instagram}
             target="_blank"
@@ -224,11 +322,14 @@ export default function Home() {
         </p>
         <Link
           href="/admin"
-          className="mt-1 text-[11px] text-ink-soft/50 transition-colors hover:text-ink-soft"
+          className="mt-1 text-[11px] text-cream transition-colors hover:text-ink-soft"
         >
-          主催者ページ
+          管理ページ
         </Link>
       </footer>
+
+      {/* ── 末尾：コンパクト版 Hero（recap CTA）。マスコット〜日時は PC で省く ── */}
+      <Hero compact />
     </main>
   );
 }

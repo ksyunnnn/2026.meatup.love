@@ -107,7 +107,7 @@ export default function MyPage() {
             (confirmed ? 'bg-meat text-white' : 'border border-line bg-cream text-ink-soft')
           }
         >
-          {confirmed ? '確定 ✅' : '受付（主催者の確認待ち）'}
+          {confirmed ? '確定 ✅' : '受付（運営の確認待ち）'}
         </span>
       </header>
 
@@ -132,7 +132,7 @@ export default function MyPage() {
             招待枠（残り {remaining} / {INVITE_QUOTA}）
           </h2>
           <p className="mb-3 text-center text-[12px] text-ink-soft">
-            友達を招待できます。招待された人は主催の確認後に確定します。
+            友達を招待できます。招待された人は運営の確認後に確定します。
           </p>
           <form onSubmit={handleIssueInvite} className="mb-3 flex items-center gap-2">
             <input

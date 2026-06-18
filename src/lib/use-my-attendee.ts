@@ -34,9 +34,6 @@ export function useMyAttendee() {
       .then((a) => {
         if (!active) return
         clearTimeout(timer)
-        console.log(
-          `[meatup] attendee read in ${Math.round(performance.now() - t0)}ms (${a ? 'found' : 'none'})`,
-        )
         // Self-heal: if a slow read lands after the timeout, clear the error.
         setError(null)
         setAttendee(a)

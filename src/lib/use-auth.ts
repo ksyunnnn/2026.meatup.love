@@ -39,9 +39,6 @@ export function useAuth() {
         if (settled) return
         settled = true
         clearTimeout(timer)
-        console.log(
-          `[meatup] auth resolved in ${Math.round(performance.now() - t0)}ms (${u ? 'signed-in' : 'signed-out'})`,
-        )
         setUser(u)
         setLoading(false)
       },

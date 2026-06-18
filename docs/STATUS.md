@@ -60,7 +60,8 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 
 ## 残タスク
 - [ ] **実機の通し確認**（オーナー手動・要サインイン）：招待発行(/admin) → サインイン（メール含む）→
-      登録（楽しみ/職業）→ チケット（参加費表示）→ シェアで OGP → /admin で承認・✓払った。
+      登録（楽しみ/職業）→ **/mypage**（状態・参加費・招待・連絡）→「チケットを見る🎟」→ **/ticket**
+      （券＋右上シェアアイコンで OGP）→ /admin で承認・✓払った → /mypage で「確定」化・「事前決済:未」消滅も確認。
 - [ ] **PayPay 本人確認(KYC)**：2026/6/17 から受け取りに必須。事前集金するなら要対応（オーナー）。
 - [ ] **Wanted の文言**・各セクション中身（Schedule/Content/Data は現在 🚧準備中の placeholder）。
 - [ ] Cloudflare **git 連携**で push 自動デプロイ化（任意）。Pages に `NEXT_PUBLIC_FIREBASE_*`＋

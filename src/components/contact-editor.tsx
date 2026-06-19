@@ -63,7 +63,7 @@ export function ContactEditor({
     <section className="w-full max-w-[540px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
       <h2 className="text-[16px] font-extrabold">運営からの連絡手段</h2>
       <p className="mt-1 text-[13px] text-ink-soft">
-        SNSで連絡してほしい人はここから登録できるよ。
+        SNSで連絡してほしい人はここに登録を！でもまあ普通に連絡してもろたほうが早いかも？
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {METHODS.map((opt) => (

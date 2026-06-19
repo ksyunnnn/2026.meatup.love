@@ -108,20 +108,33 @@ function Hero({ compact = false }: { compact?: boolean }) {
           : "min-h-svh pt-[calc(2.5rem_+_env(safe-area-inset-top))]")
       }
     >
-      {/* スプラッシュ（マスコット〜日時）。compact のときは PC で省く＝スクショの部分 */}
+      {/* スプラッシュ。recap（compact）は PC では全省略（sm:hidden）。SP では
+          マスコット/ワードマーク/2026 は残し、あおり＋日時の詳細だけ下で省く。 */}
       <div className={"contents" + (compact ? " sm:hidden" : "")}>
-        <BounceOniku className="h-[92px] w-[92px]" />
+        <BounceOniku className={compact ? "h-[60px] w-[60px]" : "h-[92px] w-[92px]"} />
 
-        <Heading className="font-[family-name:var(--font-display)] text-[clamp(56px,22vw,104px)] leading-[0.9] tracking-[0.02em] text-ink">
+        <Heading
+          className={
+            "font-[family-name:var(--font-display)] leading-[0.9] tracking-[0.02em] text-ink " +
+            (compact ? "text-[clamp(36px,14vw,68px)]" : "text-[clamp(56px,22vw,104px)]")
+          }
+        >
           meat<span className="text-meat">up</span>
         </Heading>
-        <span className="inline-block -rotate-2 rounded-pill bg-meat px-6 py-0.5 font-[family-name:var(--font-display)] text-[clamp(28px,9vw,44px)] text-white shadow-card">
+        <span
+          className={
+            "inline-block -rotate-2 rounded-pill bg-meat py-0.5 font-[family-name:var(--font-display)] text-white shadow-card " +
+            (compact ? "px-4 text-[clamp(18px,6vw,28px)]" : "px-6 text-[clamp(28px,9vw,44px)]")
+          }
+        >
           2026
         </span>
 
-        <p className="mt-2 text-[20px] font-bold">お肉、食べようぜ！🍺</p>
+        <p className={"mt-2 text-[20px] font-bold" + (compact ? " hidden" : "")}>
+          お肉、食べようぜ！🍺
+        </p>
 
-        <div className="grid gap-1.5 text-[15px]">
+        <div className={"grid gap-1.5 text-[15px]" + (compact ? " hidden" : "")}>
           <p>📅 2026.07.25（土）</p>
           <p>⏰ 11:00 open 〜 19:00 close</p>
           <p>
@@ -148,7 +161,7 @@ function Hero({ compact = false }: { compact?: boolean }) {
         </div>
       </div>
 
-      <div className="mt-4 flex w-full max-w-[320px] flex-col gap-3">
+      <div className={(compact ? "mt-6 " : "mt-4 ") + "flex w-full max-w-[320px] flex-col gap-3"}>
         <Link className="btn btn--primary btn--block" href="/invite">
           参加したいひとはこちら
         </Link>

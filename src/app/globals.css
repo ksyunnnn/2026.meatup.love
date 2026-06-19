@@ -219,3 +219,76 @@
     animation: none;
   }
 }
+
+/* Loading: the meat tries to bolt left but stays put (runs in place), while 💨
+   puffs out behind it (to the right). A playful stand-in for a spinner. */
+@layer components {
+  /* Uber-Eats-style "delivery" feel: the meat bobs like a scooter riding over a
+     road (slight bounce + lean wobble), while 💨 keeps puffing out behind it. */
+  .meat-run {
+    display: inline-block;
+    animation: meat-run 0.5s ease-in-out infinite;
+  }
+  .meat-puff {
+    display: inline-block;
+    animation: meat-puff 0.6s ease-out infinite;
+  }
+}
+
+@keyframes meat-run {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+}
+
+@keyframes meat-puff {
+  0% {
+    opacity: 0;
+    transform: translateX(0) scale(0.4);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(14px) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meat-run,
+  .meat-puff {
+    animation: none;
+  }
+  .meat-puff {
+    opacity: 0.85;
+  }
+}
+
+/* 404: a flustered meat — quick nervous shake (panic). */
+@layer components {
+  .meat-panic {
+    display: inline-block;
+    animation: meat-panic 0.35s ease-in-out infinite;
+  }
+}
+
+@keyframes meat-panic {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meat-panic {
+    animation: none;
+  }
+}

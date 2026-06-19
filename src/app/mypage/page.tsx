@@ -11,7 +11,7 @@ import { signOutUser } from '@/lib/auth'
 import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
 import { EVENT } from '@/lib/event'
 import { FeeSection, ContactSection } from '@/components/member-info'
-import { RetryNotice } from '@/components/load-state'
+import { Loading, RetryNotice } from '@/components/load-state'
 
 const wrapCls =
   'flex min-h-dvh flex-col items-center gap-4 px-4 pt-[calc(2rem_+_env(safe-area-inset-top))] pb-[calc(2rem_+_env(safe-area-inset-bottom))]'
@@ -82,7 +82,7 @@ export default function MyPage() {
     return <RetryNotice className={wrapCls + ' justify-center'} />
   }
   if (loading || (user && !loaded)) {
-    return <main className={wrapCls + ' justify-center'}>読み込み中…</main>
+    return <Loading className={wrapCls + ' justify-center'} />
   }
   if (!user) {
     return (

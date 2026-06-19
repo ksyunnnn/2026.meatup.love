@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/lib/use-auth'
 import { createAttendee, getMyAttendee } from '@/lib/attendees'
 import { JOBS } from '@/lib/profile'
 import { CONTACTS } from '@/lib/contacts'
 import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
+import { Loading } from '@/components/load-state'
 
 const inputCls =
   'w-full min-h-12 rounded-[8px] border-2 border-line bg-white px-4 py-3 text-ink focus:border-meat focus:outline-none'
@@ -133,7 +135,7 @@ export default function RegisterClient() {
   }
 
   if (loading || !user || checking) {
-    return <main className="flex min-h-dvh items-center justify-center px-4 py-6">読み込み中…</main>
+    return <Loading className="flex min-h-dvh items-center justify-center px-4 py-6" />
   }
 
   // [B] completion screen: the signup is already saved, so offering the LINE add
@@ -344,6 +346,12 @@ export default function RegisterClient() {
           </button>
           {error && <p className="text-[14px] text-meat-dark">{error}</p>}
         </form>
+        <Link
+          href="/"
+          className="mt-6 block text-center text-[13px] font-bold text-ink-soft underline-offset-2 hover:underline"
+        >
+          ← トップへ
+        </Link>
       </div>
     </main>
   )

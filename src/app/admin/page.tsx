@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/lib/use-auth'
+import { Loading } from '@/components/load-state'
 import {
   isAdmin,
   listAttendees,
@@ -153,7 +154,7 @@ export default function AdminPage() {
   }
 
   if (loading || (user && !checked)) {
-    return <main className={wrapCls}>読み込み中…</main>
+    return <Loading className={wrapCls} />
   }
 
   if (!user) {

@@ -7,7 +7,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMyAttendee } from '@/lib/use-my-attendee'
 import { ContactEditor } from '@/components/contact-editor'
-import { RetryNotice } from '@/components/load-state'
+import { ContactSection } from '@/components/member-info'
+import { Loading, RetryNotice } from '@/components/load-state'
 
 const wrapCls =
   'flex min-h-dvh flex-col items-center gap-4 px-4 pt-[calc(2rem_+_env(safe-area-inset-top))] pb-[calc(2rem_+_env(safe-area-inset-bottom))]'
@@ -20,7 +21,7 @@ export default function ContactEditPage() {
     return <RetryNotice className={wrapCls + ' justify-center'} />
   }
   if (loading || (user && !loaded)) {
-    return <main className={wrapCls + ' justify-center'}>読み込み中…</main>
+    return <Loading className={wrapCls + ' justify-center'} />
   }
   if (!user) {
     return (
@@ -51,6 +52,7 @@ export default function ContactEditPage() {
         initialValue={attendee.contactValue ?? ''}
         onSaved={() => router.push('/mypage')}
       />
+      <ContactSection />
       <Link
         className="text-[13px] font-bold text-ink-soft underline-offset-2 hover:underline"
         href="/mypage"

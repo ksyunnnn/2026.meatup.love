@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/lib/use-auth'
 import { Oniku } from '@/components/oniku'
 import { InstagramIcon, TwitterIcon } from '@/components/icons'
 import { CONTACTS } from '@/lib/contacts'
+import { MeatRunner } from '@/components/load-state'
 import { getMyAttendee } from '@/lib/attendees'
 import type { Attendee } from '@/lib/types'
 import {
@@ -132,14 +134,18 @@ export default function InviteClient() {
         <p className="text-[15px] text-ink-soft">meatup 2026 へようこそ！サインインして参加登録お願いします🙆</p>
 
         {loading ? (
-          <p className="text-[15px] text-ink-soft">読み込み中…</p>
+          <div className="flex justify-center">
+            <MeatRunner />
+          </div>
         ) : user ? (
           <div className="mt-2 flex flex-col gap-3">
             <p className="text-[14px] text-ink-soft">
               サインイン済み：{user.email ?? user.displayName ?? user.uid}
             </p>
             {checkingAttendee ? (
-              <p className="text-[15px] text-ink-soft">読み込み中…</p>
+              <div className="flex justify-center">
+            <MeatRunner />
+          </div>
             ) : attendee ? (
               <>
                 <p className="text-[15px] text-ink">
@@ -235,6 +241,12 @@ export default function InviteClient() {
             <TwitterIcon className="h-[22px] w-[22px]" />
           </a>
         </p>
+        <Link
+          href="/"
+          className="text-[13px] font-bold text-ink-soft underline-offset-2 hover:underline"
+        >
+          ← トップへ
+        </Link>
       </div>
     </main>
   )

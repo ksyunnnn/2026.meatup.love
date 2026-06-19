@@ -5,7 +5,9 @@
 // lives on this page and the ticket stays a pure "open it" moment.
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useMyAttendee } from '@/lib/use-my-attendee'
+import { signOutUser } from '@/lib/auth'
 import { createInvite, listMyInvites, INVITE_QUOTA, type InviteWithToken } from '@/lib/invites'
 import { EVENT } from '@/lib/event'
 import { FeeSection, ContactSection } from '@/components/member-info'
@@ -23,6 +25,7 @@ function inviteUrl(inv: InviteWithToken): string {
 
 export default function MyPage() {
   const { user, loading, attendee, loaded, error } = useMyAttendee()
+  const router = useRouter()
 
   const [myInvites, setMyInvites] = useState<InviteWithToken[]>([])
   const [inviteName, setInviteName] = useState('')
@@ -61,6 +64,15 @@ export default function MyPage() {
     try {
       await navigator.clipboard.writeText(url)
       setCopiedToken(token)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await signOutUser()
+      router.push('/')
     } catch (err) {
       console.error(err)
     }
@@ -181,12 +193,21 @@ export default function MyPage() {
       <FeeSection approved={confirmed} paid={attendee.paid} />
       <ContactSection />
 
-      <Link
-        className="text-[13px] font-bold text-ink-soft underline-offset-2 hover:underline"
-        href="/"
-      >
-        ← トップへ
-      </Link>
+      <div className="flex flex-col items-center gap-2">
+        <Link
+          className="text-[13px] font-bold text-ink-soft underline-offset-2 hover:underline"
+          href="/"
+        >
+          ← トップへ
+        </Link>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="text-[12px] text-ink-soft/70 underline-offset-2 hover:underline"
+        >
+          ログアウト
+        </button>
+      </div>
     </main>
   )
 }

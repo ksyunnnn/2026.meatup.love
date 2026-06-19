@@ -24,13 +24,13 @@ function sendLinkErrorMessage(err: unknown): string {
   const code = err instanceof FirebaseError ? err.code : ''
   switch (code) {
     case 'auth/quota-exceeded':
-      return 'いまメール送信が混み合っています。少し時間をおくか、上の Google でサインインしてね🙏'
+      return '送信上限に達したかも…無課金に人権はないんか？少し時間をおくか、上の Google認証ならいけるはず😭'
     case 'auth/invalid-email':
       return 'メールアドレスの形式を確認してね🙏'
     case 'auth/network-request-failed':
-      return '通信がうまくいかなかったかも。電波を確かめて、もう一度ためしてね🙏'
+      return '通信がうまくいかなかったかも。Wi-Fiはもはや空気・・🙏'
     default:
-      return 'リンクの送信に失敗しました。少し時間をおいて、もう一度ためしてね🙏'
+      return 'リンクの送信に失敗したらしい・・おれのせいじゃない！！🙏'
   }
 }
 

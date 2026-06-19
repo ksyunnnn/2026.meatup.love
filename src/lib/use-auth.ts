@@ -21,11 +21,17 @@ export function useAuth() {
 
   useEffect(() => {
     const t0 = performance.now()
-    let settled = false
+    // Guards ONLY the timeout vs. the first callback — it must NOT stop later
+    // callbacks from updating state. onAuthStateChanged is a subscription: a
+    // sign-in that completes after the initial callback (email-link completion),
+    // a sign-out, or an account switch all fire again and must reflect without a
+    // reload. (The previous one-shot guard swallowed those = the stuck-on-/invite
+    // bug, fixed only by reload.)
+    let firstFired = false
 
     const timer = setTimeout(() => {
-      if (settled) return
-      settled = true
+      if (firstFired) return
+      firstFired = true
       console.warn(
         `[meatup] auth TIMEOUT after ${AUTH_TIMEOUT_MS}ms — onAuthStateChanged never fired (likely iOS Safari IndexedDB stall)`,
       )
@@ -36,15 +42,14 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(
       auth,
       (u) => {
-        if (settled) return
-        settled = true
+        firstFired = true
         clearTimeout(timer)
+        setError(null) // self-heal if a late callback lands after the timeout
         setUser(u)
         setLoading(false)
       },
       (err) => {
-        if (settled) return
-        settled = true
+        firstFired = true
         clearTimeout(timer)
         console.warn(
           `[meatup] auth error after ${Math.round(performance.now() - t0)}ms`,

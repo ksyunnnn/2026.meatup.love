@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { createAttendee, getMyAttendee } from '@/lib/attendees'
+import { JOBS } from '@/lib/profile'
 
 const inputCls =
   'w-full min-h-12 rounded-[8px] border-2 border-line bg-white px-4 py-3 text-ink focus:border-meat focus:outline-none'
@@ -21,14 +22,13 @@ const EXPECTATIONS = [
   { key: 'connect', emoji: '🤝', label: '繋がり' },
 ]
 
-// Coarse job buckets (single-select) — kept broad so counts stay meaningful.
-const JOBS = [
-  { value: 'エンジニア', emoji: '🧑‍💻' },
-  { value: 'クリエイティブ', emoji: '🎨' },
-  { value: 'ビジネス', emoji: '📈' },
-  { value: '経営・フリーランス', emoji: '🧑‍💼' },
-  { value: '学生', emoji: '🎓' },
-  { value: 'その他', emoji: '🙂' },
+// Reachable contact channels (single-select) + a free-text id/username. Email is
+// already captured via auth, so this is a more-reachable handle — all optional.
+const CONTACT_METHODS = [
+  { value: 'LINE', emoji: '💬' },
+  { value: 'Instagram', emoji: '📷' },
+  { value: 'Twitter', emoji: '🐦' },
+  { value: 'Discord', emoji: '🎮' },
 ]
 
 export default function RegisterClient() {
@@ -38,9 +38,13 @@ export default function RegisterClient() {
   const token = searchParams.get('t') ?? ''
   const [name, setName] = useState(searchParams.get('name') ?? '')
   const [expectations, setExpectations] = useState<string[]>([])
-  const [job, setJob] = useState('')
+  const [job, setJob] = useState(searchParams.get('job') ?? '')
   const [jobOther, setJobOther] = useState('')
-  const [gender, setGender] = useState('')
+  const [contactMethod, setContactMethod] = useState('')
+  const [contactValue, setContactValue] = useState('')
+  const [withKids, setWithKids] = useState(false)
+  const [hasAllergy, setHasAllergy] = useState(false)
+  const [allergyNote, setAllergyNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [checking, setChecking] = useState(true)
@@ -81,6 +85,14 @@ export default function RegisterClient() {
       setError('楽しみなやつ、ひとつは選んでね🙏')
       return
     }
+    if (!contactMethod) {
+      setError('連絡手段を選んでね🙏')
+      return
+    }
+    if (!contactValue.trim()) {
+      setError('連絡先（ID / ユーザー名）を入れてね🙏')
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
@@ -91,7 +103,11 @@ export default function RegisterClient() {
         expectations,
         job: job || undefined,
         jobOther: job === 'その他' ? jobOther.trim() || undefined : undefined,
-        gender: gender || undefined,
+        contactMethod,
+        contactValue: contactValue.trim(),
+        withKids: withKids || undefined,
+        hasAllergy: hasAllergy || undefined,
+        allergyNote: hasAllergy ? allergyNote.trim() || undefined : undefined,
         inviteToken: token || undefined,
       })
       router.push('/mypage')
@@ -109,10 +125,14 @@ export default function RegisterClient() {
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-6">
       <div className="card w-full max-w-[400px]">
-        <h1 className="mb-6 text-[24px] font-extrabold">参加する 🍖</h1>
+        <h1 className="mb-2 text-[24px] font-extrabold">参加する 🍖</h1>
+        <p className="mb-6 text-[13px] leading-relaxed text-ink-soft">
+          賑やかしに利用したいので回答おねがいしまうす🐭 名前はわかればいいよ！
+          連絡手段は運営からの連絡のみに利用するよ！
+        </p>
         <form onSubmit={handleSubmit} className="grid gap-6">
           <label className="grid gap-2">
-            <span className="text-[15px] font-bold">名前（編集可）</span>
+            <span className="text-[15px] font-bold">名前</span>
             <input
               className={inputCls}
               value={name}
@@ -121,7 +141,7 @@ export default function RegisterClient() {
             />
           </label>
           <fieldset className="grid gap-2 border-0">
-            <span className="text-[15px] font-bold">何が楽しみ？（複数OK）</span>
+            <span className="text-[15px] font-bold">何が楽しみ？</span>
             <div className="grid grid-cols-2 gap-2">
               {EXPECTATIONS.map((opt) => (
                 <label key={opt.key} className={chipCls}>
@@ -171,26 +191,62 @@ export default function RegisterClient() {
             )}
           </fieldset>
           <fieldset className="grid gap-2 border-0">
-            <span className="text-[15px] font-bold">どっち？</span>
-            <div className="flex gap-2">
-              {['男', '女', 'その他'].map((option) => (
-                <label
-                  key={option}
-                  className="flex min-h-12 flex-1 cursor-pointer select-none items-center justify-center gap-2 rounded-[8px] border-2 border-line font-semibold has-[:checked]:border-meat has-[:checked]:bg-cream has-[:checked]:text-meat"
-                >
+            <span className="text-[15px] font-bold">運営からの連絡手段</span>
+            <div className="grid grid-cols-2 gap-2">
+              {CONTACT_METHODS.map((opt) => (
+                <label key={opt.value} className={chipCls}>
                   <input
                     type="radio"
-                    name="gender"
-                    value={option}
-                    checked={gender === option}
-                    onChange={(e) => setGender(e.target.value)}
+                    name="contactMethod"
+                    value={opt.value}
+                    checked={contactMethod === opt.value}
+                    onChange={(e) => setContactMethod(e.target.value)}
                     className="accent-meat"
                     required
                   />
-                  {option}
+                  {opt.emoji} {opt.value}
                 </label>
               ))}
             </div>
+            {contactMethod && (
+              <input
+                className={inputCls}
+                value={contactValue}
+                onChange={(e) => setContactValue(e.target.value)}
+                placeholder={`${contactMethod} のID / ユーザー名`}
+                required
+              />
+            )}
+          </fieldset>
+
+          <fieldset className="grid gap-2 border-0">
+            <span className="text-[15px] font-bold">その他</span>
+            <label className="flex items-center gap-2 text-[15px]">
+              <input
+                type="checkbox"
+                checked={withKids}
+                onChange={(e) => setWithKids(e.target.checked)}
+                className="h-5 w-5 accent-meat"
+              />
+              子連れの可能性あり
+            </label>
+            <label className="flex items-center gap-2 text-[15px]">
+              <input
+                type="checkbox"
+                checked={hasAllergy}
+                onChange={(e) => setHasAllergy(e.target.checked)}
+                className="h-5 w-5 accent-meat"
+              />
+              アレルギーあり
+            </label>
+            {hasAllergy && (
+              <input
+                className={inputCls}
+                value={allergyNote}
+                onChange={(e) => setAllergyNote(e.target.value)}
+                placeholder="アレルギーの内容（例：えび・そば）"
+              />
+            )}
           </fieldset>
           <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
             {submitting ? '送信中…' : '参加する → チケットへ'}

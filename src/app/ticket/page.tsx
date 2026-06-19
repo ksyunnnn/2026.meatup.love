@@ -19,8 +19,9 @@ export default function TicketPage() {
 
   async function handleShare() {
     if (!user || !attendee) return
-    const url = `${window.location.origin}/t/${user.uid}`
-    const text = `${attendee.name} の meatup 2026 チケット 🍖`
+    const origin = window.location.origin
+    const url = `${origin}/t/${user.uid}`
+    const text = `Meatup2026に参加します🍖 #meatup2026 ${origin}`
     if (navigator.share) {
       try {
         await navigator.share({ title: 'meatup 2026', text, url })
@@ -29,7 +30,7 @@ export default function TicketPage() {
       }
     } else {
       try {
-        await navigator.clipboard.writeText(url)
+        await navigator.clipboard.writeText(`${text}\n${url}`)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       } catch (err) {

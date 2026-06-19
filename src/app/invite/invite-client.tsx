@@ -11,6 +11,7 @@ import {
   sendEmailSignInLink,
   completeEmailLinkSignIn,
   isInAppBrowser,
+  signOutUser,
 } from '@/lib/auth'
 
 export default function InviteClient() {
@@ -73,6 +74,19 @@ export default function InviteClient() {
     router.push(`/register?${qs.toString()}`)
   }
 
+  // Signed in as the wrong account? Sign out so this page falls back to the
+  // sign-in choices — i.e. switch accounts. Reset the attendee lookup so the
+  // next account is re-checked cleanly.
+  async function handleSwitchAccount() {
+    try {
+      await signOutUser()
+      setAttendee(null)
+      setCheckingAttendee(true)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   async function handleSendLink(e: React.FormEvent) {
     e.preventDefault()
     setSending(true)
@@ -125,6 +139,13 @@ export default function InviteClient() {
                 参加へ進む →
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleSwitchAccount}
+              className="text-[13px] text-ink-soft underline-offset-2 hover:underline"
+            >
+              別のアカウントに切り替える
+            </button>
           </div>
         ) : (
           <div className="mt-2 flex flex-col gap-3">

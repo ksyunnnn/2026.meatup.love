@@ -110,7 +110,7 @@ export default function MyPage() {
 
   return (
     <main className={wrapCls}>
-      <header className="flex flex-col items-center gap-4 text-center">
+      <header className="flex flex-col items-center gap-6 text-center">
         {/* Eyebrow = the brand wordmark lockup (same as the top page), marking
             this as a meatup 2026 membership — not a generic route label. */}
         <p className="inline-flex items-center gap-2 font-[family-name:var(--font-display)] leading-none">
@@ -121,14 +121,17 @@ export default function MyPage() {
             2026
           </span>
         </p>
-        {/* こばしゅ's own block: name, contact, and the status they care about
-            all belong together — one tight group (gap only), set apart from the
-            brand eyebrow above by the header's gap. Status is not an action:
-            a colored dot + label reads as a passive state, no border/pill so it
-            can't be mistaken for an outline button. */}
-        <div className="flex flex-col items-center gap-1">
-          <h1 className="text-[28px] font-extrabold leading-tight">{attendee.name}</h1>
-          {user.email && <p className="text-[13px] text-ink-soft">{user.email}</p>}
+        {/* こばしゅ's block: the name+email pair (tightest) and the status they
+            care about sit together, set apart from the brand eyebrow above by the
+            header's gap. Nesting + ascending gaps (4 < 12 < 24px) carry the
+            hierarchy with whitespace alone — no margins. */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-1">
+            <h1 className="text-[34px] font-extrabold leading-tight">{attendee.name}</h1>
+            {user.email && <p className="text-[13px] text-ink-soft">{user.email}</p>}
+          </div>
+          {/* Status, not action: a colored dot + label reads as a passive state,
+              no border/pill so it can't be mistaken for an outline button. */}
           <p
             className={
               'inline-flex items-center gap-2 text-[14px] font-bold ' +

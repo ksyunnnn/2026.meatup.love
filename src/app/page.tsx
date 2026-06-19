@@ -296,15 +296,16 @@ export default function Home() {
 
           <JoinStep n={4} title="予定をカレンダーに追加">
             <p className="mt-1 text-[13px] text-ink-soft">
+              
+              👇️ここ押したらいい感じに追加できる！
               <a
                 href={CAL_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-bold text-meat underline underline-offset-2"
+                className="font-bold text-meat underline underline-offset-2 block"
               >
                 📅 カレンダーに追加
-              </a>{" "}
-              で忘れずに〜
+              </a>
             </p>
           </JoinStep>
 

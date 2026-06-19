@@ -129,7 +129,7 @@ export default function InviteClient() {
         <h1 className="text-[24px] font-extrabold">
           ようこそ{name ? <>、<span className="text-meat">{name}</span> さん</> : ''}
         </h1>
-        <p className="text-[15px] text-ink-soft">meatup 2026 へようこそ！サインインして参加登録おなしゃす。</p>
+        <p className="text-[15px] text-ink-soft">meatup 2026 へようこそ！サインインして参加登録お願いします🙆</p>
 
         {loading ? (
           <p className="text-[15px] text-ink-soft">読み込み中…</p>

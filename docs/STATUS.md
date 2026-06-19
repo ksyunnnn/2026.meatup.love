@@ -72,19 +72,33 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - カスタムドメイン割当は REST API で可（pages:write）。ただし **DNS 作成は zone:edit が要る**ので
   ダッシュボード操作（今回オーナーが CNAME 3本追加済み）。詳細はハブ `deploy/cloudflare-runbook.md`。
 
+## 2026-06-19 後半（公開対応）の追加変更
+- **一般公開済み**。本番＝`main`＝`origin`（手動 `wrangler` デプロイ継続）。
+- マイページ: ヘッダー刷新（ブランドワードマーク見出し／氏名／メール／状態は枠pillをやめ**ドット+ラベル**／余白は gap の入れ子で階層化）。CTAボタン幅をトップと同じ **320px** に統一。
+- 連絡手段フロー: 登録フォームに「**運営のLINEをこの場で追加**」ラジオ（選ぶと連絡先入力をパス）→ 送信後の**完了画面**でLINE追加リンク＋SNSフォールバック案内。/mypage ヘッダーに「連絡先：◯◯ ✏️」表示→ **新ルート `/mypage/contact`**（`contact-editor.tsx`＝自己更新 `updateMyContact`、`ContactSection` 併設）。自由入力に `maxLength`（名前16/職業16/連絡先50/アレルギー100）。
+- /invite: 別アカウント切替、送信エラーを **FirebaseError コード別**文言（`auth/quota-exceeded` 等）、認証前でも IG/X で連絡できるフォールバック、「← トップへ」。`/register` にも「← トップへ」。
+- **認証バグ修正**: `use-auth` の `onAuthStateChanged` が**初回コールバックしか反映しない**不具合（メールリンク完了/ログアウト/アカウント切替がリロードまで反映されなかった）を、毎コールバック反映に修正。
+- **セキュリティ①（本番ルール反映済み・テスト15/15）**: 承認付き自己作成を `getAfter` で**「同一コミットで invites/{token}.usedBy==自分」に束縛**。1本の管理者トークンから無制限に自己承認アカウントを量産できる穴を封鎖（直接 setDoc 攻撃・同時実行レースとも封じる）。
+- トップ: **会場（Venue）セクション**追加（`public/venue/*`・`next/image` を `images.unoptimized` で使用）。参加費の見せ方（事前28px/当日20px・下揃え）。最下段 recap は **SP でロゴ＋ボタンのみ**（あおり＋日時は省略・ロゴ縮小）。
+- **読み込み 🍖💨 アニメ**（`load-state.tsx` の `Loading`/`MeatRunner`、`globals.css` の `.meat-run`/`.meat-puff`＝配達バイク風）。**カスタム404**（`not-found.tsx`・🍖💦 `.meat-panic`）。いずれも reduced-motion 対応。
+- **SEO/AI**: `app/robots.ts`（全許可＝AIクローラー含む・認証ページ除外、`dynamic='force-static'`）、`app/sitemap.ts`、トップに **schema.org Event の JSON-LD**、`public/llms.txt`。※llms.txt は2026時点で効果限定的＝**構造化データが本命**。
+- **OGP 共有**: チケット共有テキスト＝「Meatup2026に参加します🍖 #meatup2026」、リンクは個別チケット一本。**キャッシュ無効化を2層**＝`og:image` を `/og/{uid}?v={ticketNo}`、共有URLを `/t/{uid}?t={ticketNo}`（チケット再発行でエッジ＆Xカード両方を確実に更新）。※既投稿のXカードは再取得まで古いまま＝削除して貼り直しで解消。
+
 ## 残タスク
-- [ ] **実機の通し確認**（オーナー手動・要サインイン）：招待発行(/admin) → サインイン（メール含む）→
-      登録（楽しみ/職業）→ **/mypage**（状態・参加費・招待・連絡）→「チケットを見る🎟」→ **/ticket**
-      （券＋右上シェアアイコンで OGP）→ /admin で承認・✓払った → /mypage で「確定」化・「事前決済:未」消滅も確認。
+- [ ] **メール Blaze 化（公開済みで実質必須）**：メールリンク送信は Spark で **5通/日**（即枯渇＝`auth/quota-exceeded`）。Blaze で **25,000/日**。Auth/Firestore はこの規模なら無料枠内で実請求ほぼ¥0。**GCPは自動停止しないので予算アラート（¥500等）を必ず併設**。※オーナー対応中。
 - [ ] **PayPay 本人確認(KYC)**：2026/6/17 から受け取りに必須。事前集金するなら要対応（オーナー）。
 - [ ] **Wanted の文言**・各セクション中身（Schedule/Content/Data は現在 🚧準備中の placeholder）。
-- [ ] Cloudflare **git 連携**で push 自動デプロイ化（任意）。Pages に `NEXT_PUBLIC_FIREBASE_*`＋
-      `FIREBASE_PROJECT_ID` を設定。
-- [ ] `www.meatup.love`→apex リダイレクト（任意）。
-- [ ] 記事化（`docs/DESIGN.md`・`PRINCIPLES.md`＋メモ `idtk-auth-config-via-gcloud` が素材）。
-- [ ] **/invite のログアウト**（別アカウント切替用）— 今回は /mypage のみ実装、invite 側は見送り。
-- [ ] **認証メール本文の完全自由化**（必要なら）＝カスタムSMTP＋自前送信（`generateSignInWithEmailLink` / `sendOobCode` returnOobLink）。Worker＋ESP＋サービスアカウントが要る。
-- [ ] **永久スピナーの真因確定**：再発時に実機 Console の `[meatup] … TIMEOUT`（auth か firestore か）を確認 → 必要なら Firestore long-polling 明示等を追加。
+- [ ] **実機の通し確認**（要サインイン）：招待発行(/admin)→サインイン（メール含む）→登録→**/mypage**→「チケットを見る🎟」→**/ticket**（共有でOGP）→/admin で承認・✓払った→/mypage で「確定」化確認。
+- [ ] （任意）**セキュリティ②**：attendees 自己 update のフィールドをホワイトリスト化（現状 status/ticketNo のみ固定＝本人が `paid`/`gender`/任意フィールドを書ける）。admin はオーナー専用のため**運用で許容中**。締めるなら `diff().affectedKeys().hasOnly([...])`。
+- [ ] （任意）Cloudflare **git 連携**で自動デプロイ化（Pages に env 設定）／ `www.meatup.love`→apex リダイレクト。
+- [ ] （任意）**認証メール本文の完全自由化**＝カスタムSMTP＋自前送信（`generateSignInWithEmailLink`/`sendOobCode` returnOobLink・Worker＋ESP＋サービスアカウント）。
+- [ ] **永久スピナーの真因確定**：再発時に Console の `[meatup] … TIMEOUT`（auth/firestore）を確認。※後述の auth 修正で「後発サインインが未反映」は解消済み。WebChannel ストールは別問題。
+
+### 完了（2026-06-19・公開対応セッション）
+- [x] **一般公開**（https://meatup.love）。本番＝`main`＝`origin` 一致。
+- [x] **/invite のアカウント切替**（旧「ログアウト」タスク）。
+- [x] **開発データのクリーンアップ**（attendees/invites/shares 全削除・`admins` 保全）。
+- [x] **記事化の素材整理**（Zenn 用・`synsk.me/docs/research/` の文体分析を参照）※執筆は別途。
 
 ## ドキュメント
 - `docs/SPEC.md` 仕様 / `DESIGN.md` 意匠・OGP（出典付き） / `PRINCIPLES.md` 内部品質原則 / `DEPLOY.md` 手順

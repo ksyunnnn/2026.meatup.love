@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { Oniku } from '@/components/oniku'
+import { InstagramIcon, TwitterIcon } from '@/components/icons'
+import { CONTACTS } from '@/lib/contacts'
 import { getMyAttendee } from '@/lib/attendees'
 import type { Attendee } from '@/lib/types'
 import {
@@ -13,6 +15,24 @@ import {
   isInAppBrowser,
   signOutUser,
 } from '@/lib/auth'
+import { FirebaseError } from 'firebase/app'
+
+// Map a sign-in-link send failure to an honest message. The generic "check your
+// email" hides real causes — most notably the daily quota (auth/quota-exceeded),
+// which on the Spark plan is only 5 emails/day.
+function sendLinkErrorMessage(err: unknown): string {
+  const code = err instanceof FirebaseError ? err.code : ''
+  switch (code) {
+    case 'auth/quota-exceeded':
+      return 'いまメール送信が混み合っています。少し時間をおくか、上の Google でサインインしてね🙏'
+    case 'auth/invalid-email':
+      return 'メールアドレスの形式を確認してね🙏'
+    case 'auth/network-request-failed':
+      return '通信がうまくいかなかったかも。電波を確かめて、もう一度ためしてね🙏'
+    default:
+      return 'リンクの送信に失敗しました。少し時間をおいて、もう一度ためしてね🙏'
+  }
+}
 
 export default function InviteClient() {
   const searchParams = useSearchParams()
@@ -96,7 +116,7 @@ export default function InviteClient() {
       setSent(true)
     } catch (err) {
       console.error(err)
-      setEmailError('リンクの送信に失敗しました。メールアドレスを確認してください。')
+      setEmailError(sendLinkErrorMessage(err))
     } finally {
       setSending(false)
     }
@@ -109,7 +129,7 @@ export default function InviteClient() {
         <h1 className="text-[24px] font-extrabold">
           ようこそ{name ? <>、<span className="text-meat">{name}</span> さん</> : ''}
         </h1>
-        <p className="text-[15px] text-ink-soft">meatup 2026 への招待です。サインインして参加に進みます。</p>
+        <p className="text-[15px] text-ink-soft">meatup 2026 へようこそ！サインインして参加登録おなしゃす。</p>
 
         {loading ? (
           <p className="text-[15px] text-ink-soft">読み込み中…</p>
@@ -192,6 +212,29 @@ export default function InviteClient() {
             {emailError && <p className="text-[14px] text-meat-dark">{emailError}</p>}
           </div>
         )}
+        {/* Pre-auth fallback: if sign-in fails (e.g. email quota), give a way to
+            reach the host. IG/X only — LINE stays members-only (prank deterrent). */}
+        <p className="flex flex-wrap items-center justify-center gap-x-1 text-[12px] text-ink-soft">
+          うまくいかない時はこちら →
+          <a
+            href={CONTACTS.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram で連絡"
+            className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
+          >
+            <InstagramIcon className="h-[22px] w-[22px]" />
+          </a>
+          <a
+            href={CONTACTS.twitter}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Twitter で連絡"
+            className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
+          >
+            <TwitterIcon className="h-[22px] w-[22px]" />
+          </a>
+        </p>
       </div>
     </main>
   )

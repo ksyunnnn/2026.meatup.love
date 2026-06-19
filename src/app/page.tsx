@@ -3,6 +3,7 @@ import Image from "next/image";
 import { BounceOniku } from "@/components/bounce-oniku";
 import { TweetChip } from "@/components/tweet-chip";
 import { CONTACTS } from "@/lib/contacts";
+import { EVENT } from "@/lib/event";
 import { InstagramIcon, TwitterIcon } from "@/components/icons";
 
 // Google Calendar "add event" link, built at render (static) time so the
@@ -46,6 +47,27 @@ const VENUE_SHOTS = [
   { src: "/venue/space.jpg", alt: "1階の広いスペースとオープン厨房" },
   { src: "/venue/kitchen.jpg", alt: "1階の業務用厨房" },
 ];
+
+// schema.org Event (JSON-LD): machine-readable when/where/who for search engines
+// and AI assistants. Broadly supported (unlike llms.txt) — the highest-ROI signal.
+const EVENT_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Event",
+  name: "MEATUP2026",
+  startDate: "2026-07-25T11:00:00+09:00",
+  endDate: "2026-07-25T19:00:00+09:00",
+  eventStatus: "https://schema.org/EventScheduled",
+  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+  location: {
+    "@type": "Place",
+    name: EVENT.venue,
+    address: EVENT.address,
+  },
+  image: "https://meatup.love/og.png",
+  url: "https://meatup.love",
+  description: "お肉を囲むゆる交流イベント「meatup」2026夏。お肉、食べようぜ！🍖",
+  organizer: { "@type": "Person", name: "こばしゅん" },
+};
 
 function SectionHead({ children }: { children: React.ReactNode }) {
   return (
@@ -181,6 +203,14 @@ export default function Home() {
     // so it wraps ALL sections and dodges Safari's dynamic-toolbar gap. The page
     // now scrolls through Hero → Wanted → Schedule/Content/Data → footer.
     <main className="flex min-h-lvh flex-col items-center border-[12px] border-meat bg-cream pb-[calc(2.5rem_+_env(safe-area-inset-bottom))] text-center">
+      <script
+        type="application/ld+json"
+        // EVENT_JSONLD is a static, developer-controlled constant (no user input).
+        // Escape `<` anyway so a stray "</script>" can never break out (defense in depth).
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(EVENT_JSONLD).replace(/</g, "\\u003c"),
+        }}
+      />
       {/* ── HERO（トップ：全画面・h1） ── */}
       <Hero />
 

@@ -15,7 +15,12 @@ export const onRequestGet = async ({ params, env, request }) => {
 
   const title = `${name} さんの招待券 — meatup 2026`
   const desc = ticketNo ? `TICKET No. ${ticketNo} 🍖` : 'お肉でつながる、あの会。'
-  const image = `${origin}/og/${encodeURIComponent(id)}`
+  // Version the OG image by ticketNo so a re-issued ticket (same uid, new
+  // ticketNo — e.g. after an admin reset/re-register) busts the 1-year immutable
+  // cache at both the edge and the scraper (X/LINE). Hashed-asset pattern.
+  const image = ticketNo
+    ? `${origin}/og/${encodeURIComponent(id)}?v=${encodeURIComponent(ticketNo)}`
+    : `${origin}/og/${encodeURIComponent(id)}`
   const pageUrl = `${origin}/t/${encodeURIComponent(id)}`
 
   const html = `<!doctype html>

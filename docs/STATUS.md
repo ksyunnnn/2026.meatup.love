@@ -85,7 +85,6 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - **OGP 共有**: チケット共有テキスト＝「Meatup2026に参加します🍖 #meatup2026」、リンクは個別チケット一本。**キャッシュ無効化を2層**＝`og:image` を `/og/{uid}?v={ticketNo}`、共有URLを `/t/{uid}?t={ticketNo}`（チケット再発行でエッジ＆Xカード両方を確実に更新）。※既投稿のXカードは再取得まで古いまま＝削除して貼り直しで解消。
 
 ## 残タスク
-- [ ] **メール Blaze 化（公開済みで実質必須）**：メールリンク送信は Spark で **5通/日**（即枯渇＝`auth/quota-exceeded`）。Blaze で **25,000/日**。Auth/Firestore はこの規模なら無料枠内で実請求ほぼ¥0。**GCPは自動停止しないので予算アラート（¥500等）を必ず併設**。※オーナー対応中。
 - [ ] **PayPay 本人確認(KYC)**：2026/6/17 から受け取りに必須。事前集金するなら要対応（オーナー）。
 - [ ] **Wanted の文言**・各セクション中身（Schedule/Content/Data は現在 🚧準備中の placeholder）。
 - [ ] **実機の通し確認**（要サインイン）：招待発行(/admin)→サインイン（メール含む）→登録→**/mypage**→「チケットを見る🎟」→**/ticket**（共有でOGP）→/admin で承認・✓払った→/mypage で「確定」化確認。
@@ -96,6 +95,7 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 
 ### 完了（2026-06-19・公開対応セッション）
 - [x] **一般公開**（https://meatup.love）。本番＝`main`＝`origin` 一致。
+- [x] **メール Blaze 化**（メールリンク送信 5通/日 → 25,000/日。予算アラート併設）。
 - [x] **/invite のアカウント切替**（旧「ログアウト」タスク）。
 - [x] **開発データのクリーンアップ**（attendees/invites/shares 全削除・`admins` 保全）。
 - [x] **記事化の素材整理**（Zenn 用・`synsk.me/docs/research/` の文体分析を参照）※執筆は別途。

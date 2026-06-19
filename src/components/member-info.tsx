@@ -61,7 +61,7 @@ export function ContactSection() {
         href={CONTACTS.line}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn btn--block mt-3 inline-flex items-center justify-center gap-2"
+        className="btn btn--block mx-auto mt-3 max-w-[320px] inline-flex items-center justify-center gap-2"
       >
         <LineIcon className="h-[18px] w-[18px]" />
         LINEで連絡する

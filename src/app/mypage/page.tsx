@@ -110,21 +110,42 @@ export default function MyPage() {
 
   return (
     <main className={wrapCls}>
-      <header className="flex flex-col items-center gap-2 text-center">
-        <p className="text-[12px] font-bold tracking-[0.1em] text-ink-soft">マイページ</p>
-        <h1 className="text-[24px] font-extrabold">{attendee.name} さん</h1>
-        <span
-          className={
-            'inline-flex items-center gap-1 rounded-pill px-4 py-1 text-[14px] font-bold ' +
-            (confirmed ? 'bg-meat text-white' : 'border border-line bg-cream text-ink-soft')
-          }
-        >
-          {confirmed ? '確定 ✅' : '受付（運営の確認待ち）'}
-        </span>
+      <header className="flex flex-col items-center gap-4 text-center">
+        {/* Eyebrow = the brand wordmark lockup (same as the top page), marking
+            this as a meatup 2026 membership — not a generic route label. */}
+        <p className="inline-flex items-center gap-2 font-[family-name:var(--font-display)] leading-none">
+          <span className="text-[22px] tracking-[0.02em] text-ink">
+            meat<span className="text-meat">up</span>
+          </span>
+          <span className="rounded-pill bg-meat px-2.5 py-0.5 text-[12px] text-white">
+            2026
+          </span>
+        </p>
+        {/* こばしゅ's own block: name, contact, and the status they care about
+            all belong together — one tight group (gap only), set apart from the
+            brand eyebrow above by the header's gap. Status is not an action:
+            a colored dot + label reads as a passive state, no border/pill so it
+            can't be mistaken for an outline button. */}
+        <div className="flex flex-col items-center gap-1">
+          <h1 className="text-[28px] font-extrabold leading-tight">{attendee.name}</h1>
+          {user.email && <p className="text-[13px] text-ink-soft">{user.email}</p>}
+          <p
+            className={
+              'inline-flex items-center gap-2 text-[14px] font-bold ' +
+              (confirmed ? 'text-meat' : 'text-ink-soft')
+            }
+          >
+            <span
+              aria-hidden
+              className={'h-2 w-2 rounded-full ' + (confirmed ? 'bg-meat' : 'bg-gold')}
+            />
+            {confirmed ? '参加確定' : '運営の確認待ち'}
+          </p>
+        </div>
       </header>
 
       {/* The inviting way into the emotional ticket reveal. */}
-      <Link className="btn btn--primary btn--block max-w-[540px]" href="/ticket">
+      <Link className="btn btn--primary btn--block max-w-[320px]" href="/ticket">
         チケットを見る 🎟
       </Link>
 

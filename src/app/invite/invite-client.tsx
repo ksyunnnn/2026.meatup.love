@@ -162,7 +162,7 @@ export default function InviteClient() {
               </>
             ) : (
               <button className="btn btn--primary btn--block" onClick={proceedToRegister}>
-                参加へ進む →
+                参加登録へ進む →
               </button>
             )}
             <button

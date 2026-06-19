@@ -29,8 +29,13 @@ export type InviteWithToken = Invite & { token: string }
  */
 export const INVITE_QUOTA = 3
 
-/** Issue an invite (host, or a confirmed attendee under FR9). Returns the token. */
-export async function createInvite(issuerUid: string, name?: string): Promise<string> {
+/** Issue an invite (host, or a confirmed attendee under FR9). Returns the token.
+ *  `job` lets the host pre-assign a job category that prefills the form. */
+export async function createInvite(
+  issuerUid: string,
+  name?: string,
+  job?: string,
+): Promise<string> {
   const token = generateToken()
   const data: Record<string, unknown> = {
     edition: EDITION,
@@ -38,6 +43,7 @@ export async function createInvite(issuerUid: string, name?: string): Promise<st
     createdAt: serverTimestamp(),
   }
   if (name) data.name = name
+  if (job) data.job = job
   await setDoc(doc(db, 'invites', token), data)
   return token
 }

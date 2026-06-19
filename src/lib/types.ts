@@ -8,8 +8,13 @@ export interface Attendee {
   name: string // display name; prefilled from invite ?name=, editable by the guest
   job?: string // one of the fixed job categories (for aggregation)
   jobOther?: string // free text, only when job === 'その他'
-  gender?: string // 男 / 女 / その他
+  gender?: string // 男 / 女 / その他 — assigned by the host from /admin (not asked at registration)
   expectations?: string[] // what they want from the event: meat / drink / play / connect
+  contactMethod?: string // a reachable channel: LINE / Instagram / Twitter / Discord
+  contactValue?: string // the id / username for contactMethod
+  withKids?: boolean // 子連れの可能性あり（その他共有事項）
+  hasAllergy?: boolean // アレルギーあり（その他共有事項）
+  allergyNote?: string // free-text allergy details when hasAllergy
   paid?: boolean // host marks this once payment is confirmed (off-app, via PayPay/cash)
   paidAt?: Timestamp
   status: AttendeeStatus
@@ -25,6 +30,7 @@ export interface Attendee {
 /** An invite the host issues. Firestore document id == the unguessable token. */
 export interface Invite {
   name?: string // prefill name for the greeting/form
+  job?: string // optional job category the host pre-assigns (prefills the form)
   edition: string
   issuedBy: string // uid that created it (admin now; attendee-with-quota later — FR9)
   usedBy?: string // attendee uid that consumed it

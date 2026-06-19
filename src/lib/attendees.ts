@@ -8,6 +8,7 @@ import {
   query,
   where,
   serverTimestamp,
+  deleteField,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Attendee, AttendeeStatus } from './types'
@@ -22,8 +23,12 @@ export interface CreateAttendeeInput {
   name: string
   job?: string
   jobOther?: string
-  gender?: string
   expectations?: string[]
+  contactMethod?: string
+  contactValue?: string
+  withKids?: boolean
+  hasAllergy?: boolean
+  allergyNote?: string
   inviteToken?: string
 }
 
@@ -71,9 +76,15 @@ export async function createAttendee(input: CreateAttendeeInput) {
     }
     if (input.job) data.job = input.job
     if (input.jobOther) data.jobOther = input.jobOther
-    if (input.gender) data.gender = input.gender
     if (input.expectations && input.expectations.length > 0)
       data.expectations = input.expectations
+    // Contact + free-form shared notes. Stored on the attendee only (NOT on the
+    // public `shares` projection — these are private, not on the ticket).
+    if (input.contactMethod) data.contactMethod = input.contactMethod
+    if (input.contactValue) data.contactValue = input.contactValue
+    if (input.withKids) data.withKids = true
+    if (input.hasAllergy) data.hasAllergy = true
+    if (input.allergyNote) data.allergyNote = input.allergyNote
     if (input.inviteToken) {
       data.inviteToken = input.inviteToken
       data.invitedAs = input.name
@@ -119,6 +130,14 @@ export async function setPaid(uid: string, paid: boolean) {
   await updateDoc(doc(db, 'attendees', uid), {
     paid,
     ...(paid ? { paidAt: serverTimestamp() } : {}),
+  })
+}
+
+/** Host assigns (or clears, with '') a guest's gender. Not asked at registration —
+ *  the host sets it from /admin so the public Data aggregation can use it. */
+export async function setGender(uid: string, gender: string) {
+  await updateDoc(doc(db, 'attendees', uid), {
+    gender: gender ? gender : deleteField(),
   })
 }
 

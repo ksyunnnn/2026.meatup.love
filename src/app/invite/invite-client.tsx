@@ -19,6 +19,7 @@ export default function InviteClient() {
   const { user, loading } = useAuth()
   const name = searchParams.get('name') ?? ''
   const token = searchParams.get('t') ?? ''
+  const job = searchParams.get('job') ?? ''
 
   const [email, setEmail] = useState('')
   const [sending, setSending] = useState(false)
@@ -28,8 +29,11 @@ export default function InviteClient() {
   const [attendee, setAttendee] = useState<Attendee | null>(null)
   const [checkingAttendee, setCheckingAttendee] = useState(true)
 
-  // Detect SNS in-app browser (client only) to suggest opening externally.
+  // Detect SNS in-app browser, client-only and post-mount: the server (static
+  // export) can't know the UA, so initializing in render would cause a hydration
+  // mismatch. The one-shot setState here is intentional — silence the lint.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setInApp(isInAppBrowser())
   }, [])
 
@@ -64,6 +68,7 @@ export default function InviteClient() {
   function proceedToRegister() {
     const qs = new URLSearchParams()
     if (name) qs.set('name', name)
+    if (job) qs.set('job', job)
     if (token) qs.set('t', token)
     router.push(`/register?${qs.toString()}`)
   }

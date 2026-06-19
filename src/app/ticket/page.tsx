@@ -23,7 +23,11 @@ export default function TicketPage() {
     // Single URL only — the personalized ticket page (/t/{uid}), itself a
     // meatup.love link. Adding a second (homepage) URL makes X/Twitter card the
     // first one and lose the personalized ticket preview, so keep just this one.
-    const url = `${origin}/t/${user.uid}`
+    // Tag the URL with ticketNo so a re-issued ticket yields a NEW share URL that
+    // X/LINE haven't cached → fresh card (the page is cached per-URL by scrapers).
+    const url = attendee.ticketNo
+      ? `${origin}/t/${user.uid}?t=${encodeURIComponent(attendee.ticketNo)}`
+      : `${origin}/t/${user.uid}`
     const text = `Meatup2026に参加します🍖 #meatup2026`
     if (navigator.share) {
       try {

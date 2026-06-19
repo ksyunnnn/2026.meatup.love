@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { createAttendee, getMyAttendee } from '@/lib/attendees'
 import { JOBS } from '@/lib/profile'
+import { CONTACTS } from '@/lib/contacts'
+import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
 
 const inputCls =
   'w-full min-h-12 rounded-[8px] border-2 border-line bg-white px-4 py-3 text-ink focus:border-meat focus:outline-none'
@@ -31,6 +33,10 @@ const CONTACT_METHODS = [
   { value: 'Discord', emoji: '🎮' },
 ]
 
+// Sentinel for the "add the host's LINE instead" choice — a peer radio that
+// stores no contact; the add link is shown on the completion screen after submit.
+const LINE_ADD = 'line-add'
+
 export default function RegisterClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -42,6 +48,9 @@ export default function RegisterClient() {
   const [jobOther, setJobOther] = useState('')
   const [contactMethod, setContactMethod] = useState('')
   const [contactValue, setContactValue] = useState('')
+  // [B] picks the "add the host's LINE" radio (value LINE_ADD): no contact is
+  // stored; the add link is shown on the completion screen after submit.
+  const [done, setDone] = useState(false)
   const [withKids, setWithKids] = useState(false)
   const [hasAllergy, setHasAllergy] = useState(false)
   const [allergyNote, setAllergyNote] = useState('')
@@ -85,11 +94,12 @@ export default function RegisterClient() {
       setError('楽しみなやつ、ひとつは選んでね🙏')
       return
     }
+    const useLine = contactMethod === LINE_ADD
     if (!contactMethod) {
       setError('連絡手段を選んでね🙏')
       return
     }
-    if (!contactValue.trim()) {
+    if (!useLine && !contactValue.trim()) {
       setError('連絡先（ID / ユーザー名）を入れてね🙏')
       return
     }
@@ -103,14 +113,18 @@ export default function RegisterClient() {
         expectations,
         job: job || undefined,
         jobOther: job === 'その他' ? jobOther.trim() || undefined : undefined,
-        contactMethod,
-        contactValue: contactValue.trim(),
+        // [B] stores no contact (reachability lives in the LINE friendship);
+        // [A] stores the chosen channel + id.
+        contactMethod: useLine ? undefined : contactMethod,
+        contactValue: useLine ? undefined : contactValue.trim(),
         withKids: withKids || undefined,
         hasAllergy: hasAllergy || undefined,
         allergyNote: hasAllergy ? allergyNote.trim() || undefined : undefined,
         inviteToken: token || undefined,
       })
-      router.push('/mypage')
+      // [B] → completion screen (offers the LINE add). [A] → /mypage as before.
+      if (useLine) setDone(true)
+      else router.push('/mypage')
     } catch (err) {
       console.error(err)
       setError('うまくいかなかった…！もう登録済みならチケット見てみて。ちょっと時間おいて、またやってみてね🙏')
@@ -120,6 +134,58 @@ export default function RegisterClient() {
 
   if (loading || !user || checking) {
     return <main className="flex min-h-dvh items-center justify-center px-4 py-6">読み込み中…</main>
+  }
+
+  // [B] completion screen: the signup is already saved, so offering the LINE add
+  // here means opening LINE can never lose the registration.
+  if (done) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center px-4 py-6">
+        <div className="card w-full max-w-[400px] text-center">
+          <h1 className="text-[24px] font-extrabold">うれし〜🎉</h1>
+          <p className="mt-3 text-[14px] text-ink-soft">
+            最後に、LINE追加よろしゅう！連絡手段ないと詰むので🥹
+          </p>
+          <a
+            href={CONTACTS.line}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn--primary btn--block mx-auto mt-5 inline-flex max-w-[320px] items-center justify-center gap-2"
+          >
+            <LineIcon className="h-[18px] w-[18px]" />
+            運営のLINEを追加する
+          </a>
+          <p className="mt-2 text-[12px] text-ink-soft">これ無理やったらSNSで連絡ほしい！ごめんなさい🙏</p>
+          <p className="mt-1 flex items-center justify-center gap-1">
+            <a
+              href={CONTACTS.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram で連絡"
+              className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
+            >
+              <InstagramIcon className="h-[22px] w-[22px]" />
+            </a>
+            <a
+              href={CONTACTS.twitter}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Twitter で連絡"
+              className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
+            >
+              <TwitterIcon className="h-[22px] w-[22px]" />
+            </a>
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/mypage')}
+            className="mt-3 text-[13px] font-bold text-ink-soft underline underline-offset-2"
+          >
+            マイページへ →
+          </button>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -137,6 +203,7 @@ export default function RegisterClient() {
               className={inputCls}
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={16}
               required
             />
           </label>
@@ -186,6 +253,7 @@ export default function RegisterClient() {
                 className={inputCls}
                 value={jobOther}
                 onChange={(e) => setJobOther(e.target.value)}
+                maxLength={16}
                 placeholder="ざっくりでOK！"
               />
             )}
@@ -202,20 +270,42 @@ export default function RegisterClient() {
                     checked={contactMethod === opt.value}
                     onChange={(e) => setContactMethod(e.target.value)}
                     className="accent-meat"
-                    required
                   />
                   {opt.emoji} {opt.value}
                 </label>
               ))}
             </div>
-            {contactMethod && (
+            {contactMethod && contactMethod !== LINE_ADD && (
               <input
                 className={inputCls}
                 value={contactValue}
                 onChange={(e) => setContactValue(e.target.value)}
+                maxLength={50}
                 placeholder={`${contactMethod} のID / ユーザー名`}
-                required
               />
+            )}
+            <div className="flex items-center gap-3 text-[12px] text-ink-soft">
+              <span className="h-px flex-1 bg-line" />
+              または
+              <span className="h-px flex-1 bg-line" />
+            </div>
+            {/* [B] add the host's LINE — a peer radio. Stores no contact; the
+                add link appears on the completion screen after submit. */}
+            <label className={chipCls}>
+              <input
+                type="radio"
+                name="contactMethod"
+                value={LINE_ADD}
+                checked={contactMethod === LINE_ADD}
+                onChange={(e) => setContactMethod(e.target.value)}
+                className="accent-meat"
+              />
+              運営のLINEをこの場で追加
+            </label>
+            {contactMethod === LINE_ADD && (
+              <p className="text-[12px] text-ink-soft">
+                ※ 参加ボタンを押したあとに追加リンクが表示されます
+              </p>
             )}
           </fieldset>
 
@@ -244,6 +334,7 @@ export default function RegisterClient() {
                 className={inputCls}
                 value={allergyNote}
                 onChange={(e) => setAllergyNote(e.target.value)}
+                maxLength={100}
                 placeholder="アレルギーの内容（例：えび・そば）"
               />
             )}

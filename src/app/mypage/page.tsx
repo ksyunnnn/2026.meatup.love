@@ -129,6 +129,13 @@ export default function MyPage() {
           <div className="flex flex-col items-center gap-1">
             <h1 className="text-[34px] font-extrabold leading-tight">{attendee.name}</h1>
             {user.email && <p className="text-[13px] text-ink-soft">{user.email}</p>}
+            <Link
+              href="/mypage/contact"
+              className="inline-flex items-center gap-1 text-[13px] text-ink-soft underline-offset-2 hover:text-meat hover:underline"
+            >
+              連絡先：{attendee.contactMethod ? attendee.contactMethod : '未登録'}
+              <span aria-hidden>✏️</span>
+            </Link>
           </div>
           {/* Status, not action: a colored dot + label reads as a passive state,
               no border/pill so it can't be mistaken for an outline button. */}
@@ -168,7 +175,7 @@ export default function MyPage() {
             招待枠（残り {remaining} / {INVITE_QUOTA}）
           </h2>
           <p className="mb-3 text-center text-[12px] text-ink-soft">
-            友達を招待できます。招待された人は運営の確認後に確定します。
+            友達を招待するURLを発行できます。招待された人は運営の確認後に確定します。<br/>普通に連絡くれてもええよ✌
           </p>
           <form onSubmit={handleIssueInvite} className="mb-3 flex items-center gap-2">
             <input
@@ -182,12 +189,10 @@ export default function MyPage() {
               className="btn btn--primary min-h-10 whitespace-nowrap px-4 py-2"
               disabled={issuing || remaining === 0}
             >
-              {issuing ? '発行中…' : '発行'}
+              {issuing ? 'URL発行中…' : 'URL発行'}
             </button>
           </form>
-          {myInvites.length === 0 ? (
-            <p className="text-center text-[13px] text-ink-soft">まだ招待していません。</p>
-          ) : (
+          {myInvites.length === 0 ? null : (
             <ul className="grid list-none gap-2">
               {myInvites.map((inv) => (
                 <li

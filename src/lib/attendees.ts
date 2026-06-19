@@ -125,6 +125,18 @@ export async function listAttendees(): Promise<AttendeeWithId[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Attendee) }))
 }
 
+/** Guest sets/replaces their own reachable contact (self-update; status &
+ *  ticketNo untouched, so firestore.rules allows it). Mainly for someone who
+ *  registered via the "add the host's LINE" path but later prefers to hand over
+ *  an SNS handle instead. */
+export async function updateMyContact(
+  uid: string,
+  contactMethod: string,
+  contactValue: string,
+) {
+  await updateDoc(doc(db, 'attendees', uid), { contactMethod, contactValue })
+}
+
 /** Host marks payment as received (after confirming PayPay/cash off-app). */
 export async function setPaid(uid: string, paid: boolean) {
   await updateDoc(doc(db, 'attendees', uid), {

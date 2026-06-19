@@ -4,7 +4,7 @@
 // into the static app. Shared helpers live in ../_lib/shares.js (DRY).
 import { isValidId, escapeHtml, fetchShare } from '../_lib/shares.js'
 
-export const onRequestGet = async ({ params, env, request }) => {
+export const onRequestGet = async ({ params, env, request, waitUntil }) => {
   if (!isValidId(params.id)) return new Response('Not found', { status: 404 })
   const id = params.id
   const origin = new URL(request.url).origin
@@ -47,6 +47,30 @@ export const onRequestGet = async ({ params, env, request }) => {
 <p>チケットページへ移動します… <a href="/ticket/">開かない場合はこちら</a></p>
 </body>
 </html>`
+
+  // Warm the OG image cache out-of-band. Rendering /og is CPU-heavy and
+  // intermittently trips the Worker CPU limit (error 1102) on a cold render;
+  // once it succeeds, /og caches the PNG (caches.default) and every later fetch
+  // is a cheap hit. Crawlers fetch this image right after parsing this HTML, so
+  // retrying the render in the background here sharply raises the odds the very
+  // first scrape lands on a warm cache instead of a 1102. Best-effort: a hit
+  // returns immediately and ends the loop; failures just retry up to the cap.
+  if (ticketNo) {
+    const warm = async () => {
+      for (let i = 0; i < 3; i++) {
+        try {
+          const r = await fetch(image)
+          const len = Number(r.headers.get('content-length') || 0)
+          if (r.ok && (r.headers.get('content-type') || '').includes('image/png') && len > 1000) {
+            return // a real PNG — now cached at the edge
+          }
+        } catch {
+          /* transient — retry */
+        }
+      }
+    }
+    waitUntil(warm())
+  }
 
   return new Response(html, {
     headers: {

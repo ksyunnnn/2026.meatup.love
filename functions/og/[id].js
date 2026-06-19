@@ -12,6 +12,78 @@ import { qrDataUrl } from '../_lib/qr.js'
 const W = 1200
 const H = 630
 
+// --- Reliability layer -------------------------------------------------------
+// Rendering this PNG (Satori layout + resvg raster) is CPU-heavy. On Cloudflare
+// it intermittently trips `error 1102` (Worker CPU limit) and, since Pages
+// Function responses aren't edge-cached by default, EVERY scrape re-ran the
+// heavy path → cards showed up only ~1-in-10. Two guards fix that:
+//   1) caches.default — once a ticket renders successfully, every later scrape
+//      (other crawlers, other colos, X/LINE refreshes) serves the cached PNG
+//      with zero CPU. The image is immutable per ?v=ticketNo, so this is safe.
+//   2) genericCard() — on any *catchable* failure (missing doc, font fetch,
+//      render throw) fall back to the static /og.png so a card ALWAYS appears.
+//      (Note: a hard 1102 kills the isolate and can't be caught here; the cache
+//      + lighter render below are what reduce its odds — see DEPLOY/STATUS.)
+
+const IMG_CC = 'public, immutable, no-transform, max-age=31536000'
+// Short TTL for the fallback so the edge re-tries the personalized render soon.
+const FALLBACK_CC = 'public, max-age=300'
+
+// Tiny, stable string hash (FNV-1a) for cache keys — no crypto needed.
+const strHash = (s) => {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return (h >>> 0).toString(36)
+}
+
+// Generic event card — keeps a preview alive when the personalized render fails.
+async function genericCard(origin) {
+  try {
+    const res = await fetch(`${origin}/og.png`)
+    if (res.ok) {
+      return new Response(res.body, {
+        status: 200,
+        headers: { 'content-type': 'image/png', 'cache-control': FALLBACK_CC },
+      })
+    }
+  } catch {
+    /* fall through */
+  }
+  return new Response('Not found', { status: 404 })
+}
+
+// loadGoogleFont, but the subset bytes are cached at the edge. Font subsetting
+// is part of the per-request CPU cost; caching it makes the repeated render
+// attempts (one per scrape until the first success is cached) markedly lighter.
+async function loadFontCached(cache, waitUntil, family, weight, text) {
+  const key = new Request(
+    `https://font-cache.meatup.love/${encodeURIComponent(family)}/${weight}/${strHash(text)}`,
+  )
+  try {
+    const hit = await cache.match(key)
+    if (hit) return await hit.arrayBuffer()
+  } catch {
+    /* cache miss / unavailable — fetch fresh */
+  }
+  const data = await loadGoogleFont({ family, weight, text })
+  try {
+    waitUntil(
+      cache.put(
+        key,
+        new Response(data, {
+          headers: { 'content-type': 'font/ttf', 'cache-control': IMG_CC },
+        }),
+      ),
+    )
+  } catch {
+    /* caching is best-effort */
+  }
+  return data
+}
+
 // Static event info — mirrors src/app/ticket/page.tsx (single venue/date).
 const EVENT = {
   date: '2026.07.25 SAT',
@@ -41,20 +113,36 @@ const PIN_SVG =
   `<circle cx="12" cy="10.2" r="3.2" stroke="${C.meat}" stroke-width="2.2" fill="none"/></svg>`
 const svgUrl = (svg) => 'data:image/svg+xml;base64,' + btoa(svg)
 
-export const onRequestGet = async ({ params, env, request }) => {
+export const onRequestGet = async ({ params, env, request, waitUntil }) => {
   if (!isValidId(params.id)) return new Response('Not found', { status: 404 })
-  if (!env.FIREBASE_PROJECT_ID)
-    return new Response('Server not configured', { status: 500 })
 
+  const origin = new URL(request.url).origin
+  const cache = caches.default
+  // Cache key includes the ?v=ticketNo so a re-issued ticket renders fresh.
+  const cacheKey = new Request(request.url, { method: 'GET' })
+
+  const hit = await cache.match(cacheKey)
+  if (hit) return hit
+
+  if (!env.FIREBASE_PROJECT_ID) return genericCard(origin)
+
+  try {
+    return await render(params, env, origin, cache, waitUntil, cacheKey)
+  } catch {
+    // Any catchable failure (Firestore, font fetch, render throw) → still a card.
+    return genericCard(origin)
+  }
+}
+
+const render = async (params, env, origin, cache, waitUntil, cacheKey) => {
   const share = await fetchShare(env, params.id)
-  if (!share) return new Response('Not found', { status: 404 })
+  if (!share) return genericCard(origin)
 
   const name = share.name || 'ゲスト'
   const ticketNo = share.ticketNo || ''
   const role = share.role || ''
   const chars = expectationChars(share.expectations)
 
-  const origin = new URL(request.url).origin
   const shareUrl = `${origin}/t/${encodeURIComponent(params.id)}`
   const qrUrl = qrDataUrl(shareUrl, { light: C.cream })
 
@@ -82,7 +170,7 @@ export const onRequestGet = async ({ params, env, request }) => {
 
   const html = `
     <div style="display:flex;width:${W}px;height:${H}px;background:${C.cream};align-items:center;justify-content:center;font-family:'Noto Sans JP'">
-      <div style="position:relative;display:flex;width:1080px;height:500px;background:${C.paper};border:3px solid ${C.ink};border-radius:36px;box-shadow:0 24px 60px rgba(126,0,29,0.18);overflow:hidden">
+      <div style="position:relative;display:flex;width:1080px;height:500px;background:${C.paper};border:3px solid ${C.ink};border-radius:36px;box-shadow:0 8px 16px rgba(126,0,29,0.15);overflow:hidden">
 
         <div style="position:relative;display:flex;flex-direction:column;flex:1;justify-content:space-between;padding:56px 60px 40px;overflow:hidden">
           ${watermark}
@@ -138,9 +226,9 @@ export const onRequestGet = async ({ params, env, request }) => {
   const dispText = 'meatup2026 SATOPENCLOSE0123456789.:- '
 
   const [jp400, jp700, righteous] = await Promise.all([
-    loadGoogleFont({ family: 'Noto Sans JP', weight: 400, text: jpText }),
-    loadGoogleFont({ family: 'Noto Sans JP', weight: 700, text: jpText }),
-    loadGoogleFont({ family: 'Righteous', weight: 400, text: dispText }),
+    loadFontCached(cache, waitUntil, 'Noto Sans JP', 400, jpText),
+    loadFontCached(cache, waitUntil, 'Noto Sans JP', 700, jpText),
+    loadFontCached(cache, waitUntil, 'Righteous', 400, dispText),
   ])
 
   const img = new ImageResponse(html, {
@@ -153,9 +241,13 @@ export const onRequestGet = async ({ params, env, request }) => {
     ],
   })
 
-  // Replace (don't append) cache-control — ImageResponse sets its own default.
-  // Name/role/number are fixed at issue time → cache hard at the edge & browser.
+  // Buffer once so we can both return AND store the same bytes. Name/role/number
+  // are fixed at issue time → cache hard at the edge & browser (immutable per
+  // ?v=ticketNo). The edge copy is what spares later scrapes the heavy render.
+  const png = await img.arrayBuffer()
   const headers = new Headers(img.headers)
-  headers.set('cache-control', 'public, immutable, no-transform, max-age=31536000')
-  return new Response(img.body, { status: img.status, headers })
+  headers.set('cache-control', IMG_CC)
+  const res = new Response(png, { status: 200, headers })
+  waitUntil(cache.put(cacheKey, res.clone()))
+  return res
 }

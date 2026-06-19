@@ -21,6 +21,18 @@
 - OG: デフォルト画像 `public/og.png`（`og:image`＝`https://meatup.love/og.png`）＋ 個別チケット OG 関数
   `functions/og/[id].js`・`t/[id].js`（`FIREBASE_PROJECT_ID=meatup-2026`）。デフォルト画像生成は `scripts/og/`。
   個別OGは `shares/{uid}`（`name`/`ticketNo`/`role`/`expectations`）を読んで動的描画（QR=`qrcode-generator`）。
+  - **OGカード信頼性修正（2026-06-19）**：SNS（X/LINE）でカードが「出たり出なかったり」する不具合を修正。
+    真因＝`og/[id]` の PNG 生成（Satori＋resvg）が **Cloudflare の CPU 制限を超過（`error 1102`）** し、
+    かつ Pages Functions のレスポンスは既定で `cf-cache-status: DYNAMIC`＝**`Cache-Control` を付けてもエッジ未キャッシュ**
+    だったため、クローラーが踏むたび毎回重い再生成が走り**約9割失敗**（成功した1回をキャッシュした端末だけ表示）。
+    対策（プラン非依存・現アーキ維持）：①`og/[id]` で **`caches.default`** に成功PNGをキャッシュ（一度成功すれば
+    その `?v=ticketNo` URLは以後ずっとヒット＝再生成ゼロ）。②**失敗時は `og.png` にフォールバック**して「カードは必ず出る」を担保
+    （※`error 1102` は isolate 強制終了のため関数内 try/catch では捕捉不可。フォントfetch失敗等の捕捉可能な失敗のみ救済）。
+    ③`box-shadow` の blur を 60→16px に縮小＋フォントのサブセットを `caches.default` にキャッシュして生成CPUを削減。
+    ④**`t/[id]` で `waitUntil` バックグラウンド温め**（`/og` をリトライ付きで先に成功させ cache 投入。クローラーは `/t`→`/og`
+    の順かつ同一コロを通るので初回ヒット率が上がる）。実測：実チケットURLは 9–10/10 で安定（修正前 1/10）。
+    ⚠ 残課題＝**初回コールド時の `1102`（CPU超過）は構造的には残る**。完全な解消は「発行時に事前生成して静的配信(R2/Storage)」
+    か **Workers Paid で `limits.cpu_ms` 引き上げ**（`limits` は Pages でも有効だが Standard 課金が前提）が必要。
 
 ## 実装状況（主な機能）
 - スタイル: Tailwind v4。トークンは `globals.css` の `@theme`。

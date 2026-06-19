@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { BounceOniku } from "@/components/bounce-oniku";
 import { TweetChip } from "@/components/tweet-chip";
 import { CONTACTS } from "@/lib/contacts";
@@ -36,6 +37,14 @@ const WANTED = [
   { emoji: "🎧", label: "DJやってくれる人" },
   { emoji: "🍸", label: "スナック・バーやってくれる人" },
   { emoji: "🛠", label: "運営ちょい手伝ってくれる人" },
+];
+
+// Venue photos (pre-resized into public/venue). The rooftop is the lead shot;
+// these three sit below it. All are 1F except the rooftop terrace (3F).
+const VENUE_SHOTS = [
+  { src: "/venue/exterior.jpg", alt: "会場の外観。1階の入口" },
+  { src: "/venue/space.jpg", alt: "1階の広いスペースとオープン厨房" },
+  { src: "/venue/kitchen.jpg", alt: "1階の業務用厨房" },
 ];
 
 function SectionHead({ children }: { children: React.ReactNode }) {
@@ -210,6 +219,45 @@ export default function Home() {
             className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
           >
             <TwitterIcon className="h-[22px] w-[22px]" />
+          </a>
+        </p>
+      </section>
+
+      {/* ── 会場 ── */}
+      <section className="w-full max-w-[480px] px-6 py-16 text-center">
+        <SectionHead>Venue</SectionHead>
+        <p className="mt-4 text-[14px] font-bold text-ink-soft">会場こんなところ！</p>
+
+        <div className="mt-6">
+          <Image
+            src="/venue/rooftop.jpg"
+            alt="屋上テラス（3階）。夜のイルミネーションと長テーブル、奥に夜景"
+            width={1500}
+            height={1125}
+            className="w-full rounded-[14px] border-2 border-line shadow-card"
+          />
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {VENUE_SHOTS.map((s) => (
+            <div
+              key={s.src}
+              className="relative aspect-square overflow-hidden rounded-[8px] border border-line"
+            >
+              <Image src={s.src} alt={s.alt} fill sizes="160px" className="object-cover" />
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-5 text-[13px]">
+          📍{" "}
+          <a
+            href="https://goo.gl/maps/NX273kTyHT5NrSvF8"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-meat underline underline-offset-2"
+          >
+            EAT TOKYO JAKUZURE（地図）
           </a>
         </p>
       </section>

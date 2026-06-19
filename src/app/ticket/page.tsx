@@ -28,16 +28,22 @@ export default function TicketPage() {
     const url = attendee.ticketNo
       ? `${origin}/t/${user.uid}?t=${encodeURIComponent(attendee.ticketNo)}`
       : `${origin}/t/${user.uid}`
-    const text = `Meatup2026に参加します🍖 #meatup2026`
+    const message = `Meatup2026に参加します🍖 #meatup2026`
+    // iOS Safari Web Share quirk: when BOTH `text` and `url` are passed, text
+    // wins and the URL is dropped (the share sheet's "Copy" then yields no URL).
+    // Workaround: embed the URL into the text and pass a single field — "nothing
+    // beats text", so the URL always rides along. Still one URL → X/LINE card
+    // the personalized ticket.
+    const shareText = `${message}\n${url}`
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'meatup 2026', text, url })
+        await navigator.share({ title: 'meatup 2026', text: shareText })
       } catch {
         /* user cancelled */
       }
     } else {
       try {
-        await navigator.clipboard.writeText(`${text}\n${url}`)
+        await navigator.clipboard.writeText(shareText)
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       } catch (err) {

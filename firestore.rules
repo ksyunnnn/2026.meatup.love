@@ -65,8 +65,13 @@ service cloud.firestore {
           // walk-in, or invited by a confirmed attendee (FR9): must start pending
           request.resource.data.status == 'pending'
           // host-invited: may start approved ONLY with a valid admin-issued token
+          // that is ALSO consumed (usedBy == self) in this SAME commit. getAfter
+          // binds the approval to the consumption, so one token can't auto-approve
+          // more than one account and a direct write that skips consuming the
+          // token (would leave it reusable) is rejected.
           || (request.resource.data.status == 'approved'
-              && adminInvite(request.resource.data.inviteToken, request.resource.data.edition))
+              && adminInvite(request.resource.data.inviteToken, request.resource.data.edition)
+              && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.inviteToken)).data.usedBy == request.auth.uid)
         );
 
       // Self-update: edit own profile fields, but NOT status or ticketNo.

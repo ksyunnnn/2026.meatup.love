@@ -5,7 +5,7 @@ import {
   assertFails,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest'
 
 let testEnv: RulesTestEnvironment
@@ -119,10 +119,18 @@ describe('FR8/FR9 (referral tree)', () => {
     })
   })
 
-  it('admin-issued invite auto-confirms (approved create allowed)', async () => {
+  it('admin-issued invite auto-confirms when the token is consumed in the same commit', async () => {
     const u = testEnv.authenticatedContext('newA').firestore()
-    await assertSucceeds(
-      setDoc(doc(u, 'attendees/newA'), { ...attendee('approved'), inviteToken: 'adminTok' }),
+    const batch = writeBatch(u)
+    batch.set(doc(u, 'attendees/newA'), { ...attendee('approved'), inviteToken: 'adminTok' })
+    batch.update(doc(u, 'invites/adminTok'), { usedBy: 'newA' })
+    await assertSucceeds(batch.commit())
+  })
+
+  it('approved create is rejected if it does NOT consume the token (no unlimited reuse)', async () => {
+    const u = testEnv.authenticatedContext('evilA').firestore()
+    await assertFails(
+      setDoc(doc(u, 'attendees/evilA'), { ...attendee('approved'), inviteToken: 'adminTok' }),
     )
   })
 

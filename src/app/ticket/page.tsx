@@ -20,8 +20,11 @@ export default function TicketPage() {
   async function handleShare() {
     if (!user || !attendee) return
     const origin = window.location.origin
+    // Single URL only — the personalized ticket page (/t/{uid}), itself a
+    // meatup.love link. Adding a second (homepage) URL makes X/Twitter card the
+    // first one and lose the personalized ticket preview, so keep just this one.
     const url = `${origin}/t/${user.uid}`
-    const text = `Meatup2026に参加します🍖 #meatup2026 ${origin}`
+    const text = `Meatup2026に参加します🍖 #meatup2026`
     if (navigator.share) {
       try {
         await navigator.share({ title: 'meatup 2026', text, url })

@@ -1,4 +1,4 @@
-# 現状と引き継ぎ（2026-06-19 時点）
+# 現状と引き継ぎ（2026-06-21 更新）
 
 ブランチ: `main` ＝ `origin`（push 済み）。本番(Pages/Firebase)は最新ビルド反映済み。
 デプロイは手動 `wrangler`（git 未連携）。今後も `main` で作業。
@@ -96,6 +96,15 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - **読み込み 🍖💨 アニメ**（`load-state.tsx` の `Loading`/`MeatRunner`、`globals.css` の `.meat-run`/`.meat-puff`＝配達バイク風）。**カスタム404**（`not-found.tsx`・🍖💦 `.meat-panic`）。いずれも reduced-motion 対応。
 - **SEO/AI**: `app/robots.ts`（全許可＝AIクローラー含む・認証ページ除外、`dynamic='force-static'`）、`app/sitemap.ts`、トップに **schema.org Event の JSON-LD**、`public/llms.txt`。※llms.txt は2026時点で効果限定的＝**構造化データが本命**。
 - **OGP 共有**: チケット共有テキスト＝「Meatup2026に参加します🍖 #meatup2026」、リンクは個別チケット一本。**キャッシュ無効化を2層**＝`og:image` を `/og/{uid}?v={ticketNo}`、共有URLを `/t/{uid}?t={ticketNo}`（チケット再発行でエッジ＆Xカード両方を確実に更新）。※既投稿のXカードは再取得まで古いまま＝削除して貼り直しで解消。
+
+## 2026-06-21（招待登録バグ修正）
+- **招待リンク経由の登録が必ず失敗していた不具合を修正**（本番ルール＋フロント両方デプロイ済み）。
+  - 症状: 招待された人が `/register` で「参加する」を押すと毎回フォールバック文言で失敗。飛び込み登録は成功＝「**招待時だけ失敗**」。
+  - 真因: `createAttendee` のトランザクションが `admins/{issuedBy}` を**クライアント読取**して自動承認可否を判定していたが、`admins` 読取ルールが「自分のdocか管理者のみ」で、招待された非管理者が**発行者(オーナー)の admin doc を読めず `PERMISSION_DENIED`** → tx ごと throw。
+    - ルール側 `adminInvite()` の `get()` は特権評価で通る一方、クライアントの `tx.get` は読取ルールに従う＝**評価経路の非対称**。旧ルールテストは `writeBatch`（読取なし）で素通りし見逃していた。
+  - 修正: `firestore.rules` の `admins` を **`allow get: if isSignedIn()` / `allow list: if isAdmin()`** に分割（単体読取のみ開放・列挙は管理者限定）。本番と同じ「admins読取つきトランザクション」の**回帰テストを追加**（rules **18/18**）。
+  - 併せて `register-client` の catch-all を **FirebaseError コード別**に分岐（`permission-denied`＝招待リンク／`unavailable`＝通信／`aborted`＝競合…）。失敗時は Console に `[meatup] register failed <code>` を出す。
+  - ⚠ **未検証**: いしまる本人での再登録の通し（要サインインのため手元で再現不可）。本人が時間をおいて再試行で確定。失敗時は新しい文言（どのコード分岐か）を回収。
 
 ## 残タスク
 - [ ] **PayPay 本人確認(KYC)**：2026/6/17 から受け取りに必須。事前集金するなら要対応（オーナー）。

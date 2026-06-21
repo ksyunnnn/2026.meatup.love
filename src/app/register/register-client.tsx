@@ -90,6 +90,10 @@ export default function RegisterClient() {
   const [allergyNote, setAllergyNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  // Raw failure code shown (muted) under the message. A regular user can't open
+  // the console, so this makes a single screenshot enough to diagnose which
+  // branch fired (e.g. permission-denied). Empty for client-side validation.
+  const [errorCode, setErrorCode] = useState('')
   const [checking, setChecking] = useState(true)
 
   // Require sign-in: send unauthenticated visitors back to the invite page.
@@ -124,6 +128,7 @@ export default function RegisterClient() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!user) return
+    setErrorCode('') // validation errors below carry no code; cleared up front
     if (expectations.length === 0) {
       setError('楽しみなやつ、ひとつは選んでね🙏')
       return
@@ -163,6 +168,7 @@ export default function RegisterClient() {
       const code = err instanceof FirebaseError ? err.code : 'unknown'
       console.error('[meatup] register failed', code, err)
       setError(registerErrorMessage(err))
+      setErrorCode(code)
       setSubmitting(false)
     }
   }
@@ -377,7 +383,16 @@ export default function RegisterClient() {
           <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
             {submitting ? '送信中…' : '参加する → チケットへ'}
           </button>
-          {error && <p className="text-[14px] text-meat-dark">{error}</p>}
+          {error && (
+            <div className="space-y-1">
+              <p className="text-[14px] text-meat-dark">{error}</p>
+              {errorCode && (
+                <p className="text-[11px] text-ink-soft/70">
+                  （コード: {errorCode}）
+                </p>
+              )}
+            </div>
+          )}
         </form>
         <Link
           href="/"

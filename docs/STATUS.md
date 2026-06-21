@@ -33,6 +33,7 @@
     の順かつ同一コロを通るので初回ヒット率が上がる）。実測：実チケットURLは 9–10/10 で安定（修正前 1/10）。
     ⚠ 残課題＝**初回コールド時の `1102`（CPU超過）は構造的には残る**。完全な解消は「発行時に事前生成して静的配信(R2/Storage)」
     か **Workers Paid で `limits.cpu_ms` 引き上げ**（`limits` は Pages でも有効だが Standard 課金が前提）が必要。
+    追跡 → https://github.com/ksyunnnn/2026.meatup.love/issues/10
 
 ## 実装状況（主な機能）
 - スタイル: Tailwind v4。トークンは `globals.css` の `@theme`。

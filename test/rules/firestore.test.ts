@@ -5,7 +5,17 @@ import {
   assertFails,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore'
+import {
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  setDoc,
+  updateDoc,
+  writeBatch,
+  runTransaction,
+  serverTimestamp,
+} from 'firebase/firestore'
 import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest'
 
 let testEnv: RulesTestEnvironment
@@ -127,6 +137,34 @@ describe('FR8/FR9 (referral tree)', () => {
     await assertSucceeds(batch.commit())
   })
 
+  // Regression: the REAL createAttendee() runs a transaction that first READS
+  // admins/{issuedBy} (to decide auto-confirm) before writing. The writeBatch
+  // test above never exercises that client-side read, so it missed the bug
+  // where a non-admin registrant was denied reading the host's admin doc and
+  // the whole registration threw. This mirrors src/lib/attendees.ts.
+  it('createAttendee tx (reads admins/{issuedBy}, then writes) succeeds for a host invite', async () => {
+    const db = testEnv.authenticatedContext('newA').firestore()
+    await assertSucceeds(
+      runTransaction(db, async (tx) => {
+        const inviteRef = doc(db, 'invites/adminTok')
+        const inv = (await tx.get(inviteRef)).data()!
+        const issuerAdmin = await tx.get(doc(db, 'admins', String(inv.issuedBy)))
+        const approved = issuerAdmin.exists()
+        tx.update(inviteRef, { usedBy: 'newA' })
+        tx.set(doc(db, 'attendees/newA'), {
+          ...attendee(approved ? 'approved' : 'pending'),
+          inviteToken: 'adminTok',
+          invitedAs: 'A',
+        })
+        tx.set(doc(db, 'shares/newA'), {
+          name: 'A',
+          ticketNo: 'MU-2026-AAAA',
+          edition: '2026',
+        })
+      }),
+    )
+  })
+
   it('approved create is rejected if it does NOT consume the token (no unlimited reuse)', async () => {
     const u = testEnv.authenticatedContext('evilA').firestore()
     await assertFails(
@@ -224,12 +262,30 @@ describe('shares (public OG projection)', () => {
 })
 
 describe('admins', () => {
-  it('a user can read their own admin doc but not others', async () => {
+  // Single-doc reads are open to any signed-in user — registration via an
+  // invite must check admins/{issuedBy} (the host, not the registrant).
+  it('any signed-in user may get a single admin doc (own or other)', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'admins/admin1'), {})
     })
     const u1 = testEnv.authenticatedContext('u1').firestore()
     await assertSucceeds(getDoc(doc(u1, 'admins/u1'))) // own (missing) → allowed
-    await assertFails(getDoc(doc(u1, 'admins/admin1'))) // someone else's → denied
+    await assertSucceeds(getDoc(doc(u1, 'admins/admin1'))) // the host's → allowed (get)
+  })
+
+  it('an unauthenticated user cannot read an admin doc', async () => {
+    const anon = testEnv.unauthenticatedContext().firestore()
+    await assertFails(getDoc(doc(anon, 'admins/admin1')))
+  })
+
+  // Enumeration stays admin-only so the full roster can't be listed.
+  it('listing the admins collection is admin-only', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin1'), {})
+    })
+    const u1 = testEnv.authenticatedContext('u1').firestore()
+    await assertFails(getDocs(collection(u1, 'admins')))
+    const admin = testEnv.authenticatedContext('admin1').firestore()
+    await assertSucceeds(getDocs(collection(admin, 'admins')))
   })
 })

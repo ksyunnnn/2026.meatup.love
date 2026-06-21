@@ -129,8 +129,13 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      // A user may check their OWN admin status; admins may read any.
-      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      // Single-doc read is open to any signed-in user: registration via an
+      // invite must check whether the issuer is a host (admins/{issuedBy}), and
+      // that issuer is not the registrant. Docs are empty and keyed by an opaque
+      // uid, so exposing existence-by-id is low-risk. Enumeration stays
+      // admin-only so the full admin roster can't be listed.
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
       allow write: if false; // set via console / privileged tooling only
     }
   }

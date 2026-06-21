@@ -3,12 +3,44 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { FirebaseError } from 'firebase/app'
 import { useAuth } from '@/lib/use-auth'
 import { createAttendee, getMyAttendee } from '@/lib/attendees'
 import { JOBS } from '@/lib/profile'
 import { CONTACTS } from '@/lib/contacts'
 import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
 import { Loading } from '@/components/load-state'
+
+// Map a registration (createAttendee) failure to an honest, cause-specific
+// message. createAttendee runs a Firestore transaction, so failures surface as
+// FirestoreError codes — a single catch-all ("またやってみてね") hid distinct
+// causes (e.g. a rules rejection vs. a flaky network), making field reports
+// undiagnosable. Each branch is worded distinctly so the on-screen text alone
+// tells which case fired; the raw code is also logged for the console.
+function registerErrorMessage(err: unknown): string {
+  const code = err instanceof FirebaseError ? err.code : ''
+  switch (code) {
+    case 'permission-denied':
+      // Rules rejected the write — most often the invite path (a bad/expired
+      // link, or an invite already used). This is the class that blocked the
+      // first invited guest. Steer them to a recoverable next step.
+      return '登録がはじかれたみたい…！招待リンクが古いか、すでに使われてるかも。リンクを発行しなおしてもらうか、運営に声かけてね🙏'
+    case 'already-exists':
+      return 'もう登録済みみたい！チケットを見にいってみてね🎟'
+    case 'unavailable':
+    case 'deadline-exceeded':
+    case 'cancelled':
+      return '通信がうまくいかなかったかも。電波のいいとこで、もう一回ためしてね🙏'
+    case 'aborted':
+    case 'failed-precondition':
+      // Transaction lost a race — typically the invite was consumed in parallel.
+      return 'ほぼ同時に処理が走ってぶつかったかも。少し待って、もう一回ためしてね🙏'
+    case 'resource-exhausted':
+      return 'いまアクセスが混みあってるみたい…少し時間をおいてね🙏'
+    default:
+      return 'うまくいかなかった…！もう登録済みならチケット見てみて。ちょっと時間おいて、またやってみてね🙏'
+  }
+}
 
 const inputCls =
   'w-full min-h-12 rounded-[8px] border-2 border-line bg-white px-4 py-3 text-ink focus:border-meat focus:outline-none'
@@ -128,8 +160,9 @@ export default function RegisterClient() {
       if (useLine) setDone(true)
       else router.push('/mypage')
     } catch (err) {
-      console.error(err)
-      setError('うまくいかなかった…！もう登録済みならチケット見てみて。ちょっと時間おいて、またやってみてね🙏')
+      const code = err instanceof FirebaseError ? err.code : 'unknown'
+      console.error('[meatup] register failed', code, err)
+      setError(registerErrorMessage(err))
       setSubmitting(false)
     }
   }

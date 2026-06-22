@@ -37,7 +37,9 @@ service cloud.firestore {
       return token is string
         && exists(/databases/$(database)/documents/invites/$(token))
         && get(/databases/$(database)/documents/invites/$(token)).data.edition == edition
-        && !get(/databases/$(database)/documents/invites/$(token)).data.keys().hasAny(['usedBy']);
+        // Match the consume rule's form ('usedBy' in data) so the two stay
+        // consistent and a future deleteField('usedBy') reset can't reopen it.
+        && !('usedBy' in get(/databases/$(database)/documents/invites/$(token)).data);
     }
 
     // A valid invite that was issued by a host (admin). Only these auto-confirm;
@@ -74,11 +76,19 @@ service cloud.firestore {
               && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.inviteToken)).data.usedBy == request.auth.uid)
         );
 
-      // Self-update: edit own profile fields, but NOT status or ticketNo.
+      // Self-update: a guest may edit ONLY their own profile/contact fields.
+      // Whitelisting the touchable keys (not just pinning status/ticketNo) stops
+      // a guest from writing host-controlled fields via a raw updateDoc — most
+      // importantly `paid`/`paidAt` (the host marks payment off-app; self-set
+      // would let someone attend unpaid), plus `gender`/`approvedAt`/
+      // `approvedBy`/`inviteToken` audit fields.
       allow update: if isSignedIn()
         && request.auth.uid == uid
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.ticketNo == resource.data.ticketNo;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+             'name', 'job', 'jobOther', 'expectations',
+             'contactMethod', 'contactValue',
+             'withKids', 'hasAllergy', 'allergyNote'
+           ]);
 
       // Host: approve/reject and assign ticketNo.
       allow update: if isAdmin();
@@ -117,11 +127,17 @@ service cloud.firestore {
       }
       // Owner-only; only allow-listed fields; ticketNo is fixed once written
       // (name may change later for display, but the number can't be forged).
+      // The public ticketNo must match the owner's real attendees record —
+      // shares is always created in the same transaction as attendees/{uid}
+      // (see createAttendee), so getAfter sees the co-written attendee. This
+      // stops a guest from publishing a fabricated ticket number.
       allow create: if isSignedIn()
         && request.auth.uid == uid
         && sharesFieldsOk()
         && request.resource.data.name is string
-        && request.resource.data.ticketNo is string;
+        && request.resource.data.ticketNo is string
+        && request.resource.data.ticketNo
+             == getAfter(/databases/$(database)/documents/attendees/$(uid)).data.ticketNo;
       allow update: if isSignedIn()
         && request.auth.uid == uid
         && sharesFieldsOk()

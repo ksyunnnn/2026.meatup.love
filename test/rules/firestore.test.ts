@@ -56,6 +56,24 @@ describe('attendees', () => {
     await assertFails(updateDoc(doc(u1, 'attendees/u1'), { status: 'approved' }))
   })
 
+  it('self-update may touch profile/contact fields only (C1)', async () => {
+    const u1 = testEnv.authenticatedContext('u1').firestore()
+    await assertSucceeds(setDoc(doc(u1, 'attendees/u1'), attendee('pending')))
+    // allowed: contact + profile fields
+    await assertSucceeds(
+      updateDoc(doc(u1, 'attendees/u1'), {
+        contactMethod: 'Twitter',
+        contactValue: 'handle',
+      }),
+    )
+    // forbidden: host-controlled fields a guest must not self-set
+    await assertFails(updateDoc(doc(u1, 'attendees/u1'), { paid: true }))
+    await assertFails(updateDoc(doc(u1, 'attendees/u1'), { gender: '男' }))
+    await assertFails(
+      updateDoc(doc(u1, 'attendees/u1'), { approvedBy: 'u1' }),
+    )
+  })
+
   it('only the owner or an admin can read an attendee', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'attendees/u1'), attendee('pending'))
@@ -203,6 +221,18 @@ describe('FR8/FR9 (referral tree)', () => {
 })
 
 describe('shares (public OG projection)', () => {
+  // A share's ticketNo must match the owner's attendees record (C2). The
+  // standalone create tests below therefore need a real attendee seeded with a
+  // known ticketNo ('X'); production writes both in one tx so getAfter matches.
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'attendees/u1'), {
+        ...attendee('approved'),
+        ticketNo: 'X',
+      })
+    })
+  })
+
   it('is world-readable', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'shares/u1'), {
@@ -223,6 +253,18 @@ describe('shares (public OG projection)', () => {
     const evil = testEnv.authenticatedContext('evil').firestore()
     await assertFails(
       setDoc(doc(evil, 'shares/u1'), { name: 'B', ticketNo: 'Y', edition: '2026' }),
+    )
+  })
+
+  it('rejects a share whose ticketNo does not match the attendee record (C2)', async () => {
+    const u1 = testEnv.authenticatedContext('u1').firestore()
+    // attendees/u1.ticketNo === 'X'; forging another number must be rejected.
+    await assertFails(
+      setDoc(doc(u1, 'shares/u1'), {
+        name: 'A',
+        ticketNo: 'MU-2026-FORGED',
+        edition: '2026',
+      }),
     )
   })
 

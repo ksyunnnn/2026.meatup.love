@@ -237,9 +237,9 @@ export default function RegisterClient() {
         )}
 
         <div className="text-center">
-          <h1 className="text-[24px] font-extrabold">登録できたよ〜🎉</h1>
+          <h1 className="text-[24px] font-extrabold">登録多謝〜🎉</h1>
           <p className="mt-2 text-[14px] text-ink-soft">
-            チケット発行！SNSで「参加します」広めてくれたら最高に嬉しい🍖
+            チケット発行！ええ感じやない？？SNSで共有してくれたら最高に嬉しい🍖
           </p>
         </div>
 

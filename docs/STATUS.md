@@ -1,4 +1,4 @@
-# 現状と引き継ぎ（2026-06-21 更新）
+# 現状と引き継ぎ（2026-06-22 更新）
 
 ブランチ: `main` ＝ `origin`（push 済み）。本番(Pages/Firebase)は最新ビルド反映済み。
 デプロイは手動 `wrangler`（git 未連携）。今後も `main` で作業。
@@ -106,12 +106,22 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
   - 併せて `register-client` の catch-all を **FirebaseError コード別**に分岐（`permission-denied`＝招待リンク／`unavailable`＝通信／`aborted`＝競合…）。失敗時は Console に `[meatup] register failed <code>` を出す。
   - ⚠ **未検証**: いしまる本人での再登録の通し（要サインインのため手元で再現不可）。本人が時間をおいて再試行で確定。失敗時は新しい文言（どのコード分岐か）を回収。
 
+## 2026-06-22（コード/DB/ドメイン レビュー対応）
+全系統をレビュー（DB整合性＝問題なし／コードレビュー2系統／ドメイン実測）し、判明分を修正・本番反映・push 済み。
+- **セキュリティ強化（ルール・本番反映・テスト 20/20）**
+  - **C1**：attendees 自己update を `affectedKeys().hasOnly([profile/contact 9フィールド])` のホワイトリストへ。本人が `paid`/`gender`/`approvedBy` 等を直接書ける穴を封鎖（＝旧「セキュリティ②」完了）。
+  - **C2**：`shares` 作成時 `ticketNo` を `getAfter` で attendees 実体と一致必須に（公開券番号の偽装防止）。
+  - **L3**：`validInvite` を `'usedBy' in data` 形式へ統一（consume 側と一致）。
+- **OG関数の堅牢化**：`og/[id]` の `cache.match` を try/catch 内へ（キャッシュ例外で500を返さず必ずカード）。`t/[id]` の warm ループを `x-og:render` マーカー判定へ（フォールバックと本生成を確実に区別・body消費で接続解放）。`og/[id]` 本生成に `x-og:render` ヘッダ付与。
+- **www.meatup.love → apex 301**：www を `meatup-2026` Pages のカスタムドメインに追加＋ `functions/_middleware.js` でホスト判定301（パス/クエリ保持）。**稼働確認済**。CNAME（`www`→`meatup-2026.pages.dev`・Proxied）は wrangler OAuth に DNS 編集権限が無くダッシュボードで作成。
+- **AIクローラー方針＝現状維持で確定**：Cloudflare「AIボットをブロック」は **ON のまま**。これがブロックするのは**学習用クローラー（GPTBot/ClaudeBot/CCBot/Google-Extended 等）だけ**で、**回答での紹介に効くクローラー（OAI-SearchBot/ChatGPT-User/Claude-User/Claude-SearchBot/PerplexityBot）は許可**＝ChatGPT・Claude・Perplexity の回答で紹介される状態は成立。学習はブロックのまま、が方針。※Geminiに出したくなった時だけ Google-Extended 解放（＝AIブロックOFF）が必要。robots.ts の「全許可」コメントは実態（学習のみブロック）と差があるが**意図的**＝触らない。
+
 ## 残タスク
 - [ ] **PayPay 本人確認(KYC)**：2026/6/17 から受け取りに必須。事前集金するなら要対応（オーナー）。
 - [ ] **Wanted の文言**・各セクション中身（Schedule/Content/Data は現在 🚧準備中の placeholder）。
 - [ ] **実機の通し確認**（要サインイン）：招待発行(/admin)→サインイン（メール含む）→登録→**/mypage**→「チケットを見る🎟」→**/ticket**（共有でOGP）→/admin で承認・✓払った→/mypage で「確定」化確認。
-- [ ] （任意）**セキュリティ②**：attendees 自己 update のフィールドをホワイトリスト化（現状 status/ticketNo のみ固定＝本人が `paid`/`gender`/任意フィールドを書ける）。admin はオーナー専用のため**運用で許容中**。締めるなら `diff().affectedKeys().hasOnly([...])`。
-- [ ] （任意）Cloudflare **git 連携**で自動デプロイ化（Pages に env 設定）／ `www.meatup.love`→apex リダイレクト。
+- [x] ~~（任意）**セキュリティ②**：attendees 自己 update のフィールドをホワイトリスト化~~ → **2026-06-22 完了（C1）**。
+- [ ] （任意）Cloudflare **git 連携**で自動デプロイ化（Pages に env 設定）。※`www.meatup.love`→apex リダイレクトは **2026-06-22 完了**。
 - [ ] （任意）**認証メール本文の完全自由化**＝カスタムSMTP＋自前送信（`generateSignInWithEmailLink`/`sendOobCode` returnOobLink・Worker＋ESP＋サービスアカウント）。
 - [ ] **永久スピナーの真因確定**：再発時に Console の `[meatup] … TIMEOUT`（auth/firestore）を確認。※後述の auth 修正で「後発サインインが未反映」は解消済み。WebChannel ストールは別問題。
 

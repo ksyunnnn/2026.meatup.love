@@ -25,9 +25,15 @@ const STEPS = [
 const INTRO = ['animate__bounceInDown', STEPS[0]]
 const DECAY_MS = 1200
 
+// Base ~0.75s (matches 2018's jiggle), then faster as taps escalate.
+const durationFor = (level: number) => Math.max(0.4, 0.75 - level * 0.08)
+
 export function BounceOniku({ className }: { className?: string }) {
   const [anim, setAnim] = useState<string>(INTRO[0]) // current classes ('' = still)
   const [seq, setSeq] = useState(0) // remount counter → (re)starts the animation
+  // Mirror of `level` for rendering: a ref can't be read during render, so the
+  // escalation drives the animation duration via state, set in the handlers.
+  const [duration, setDuration] = useState(durationFor(0))
   const phase = useRef(1) // next INTRO index to play (>= length once intro is done)
   const level = useRef(0) // tap escalation level
   const decay = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -41,9 +47,11 @@ export function BounceOniku({ className }: { className?: string }) {
     phase.current = INTRO.length // cancel any remaining intro
     level.current = Math.min(level.current + 1, STEPS.length - 1)
     play(STEPS[level.current])
+    setDuration(durationFor(level.current)) // faster as taps escalate
     if (decay.current) clearTimeout(decay.current)
     decay.current = setTimeout(() => {
       level.current = 0
+      setDuration(durationFor(0)) // back to calm
       setAnim('')
     }, DECAY_MS)
   }, [])
@@ -56,9 +64,6 @@ export function BounceOniku({ className }: { className?: string }) {
       setAnim('') // settle and sit still (no remount → no extra replay)
     }
   }, [])
-
-  // Base ~0.75s (matches 2018's jiggle), then faster as taps escalate.
-  const duration = Math.max(0.4, 0.75 - level.current * 0.08)
 
   return (
     <button

@@ -60,10 +60,13 @@ export const onRequestGet = async ({ params, env, request, waitUntil }) => {
       for (let i = 0; i < 3; i++) {
         try {
           const r = await fetch(image)
-          const len = Number(r.headers.get('content-length') || 0)
-          if (r.ok && (r.headers.get('content-type') || '').includes('image/png') && len > 1000) {
-            return // a real PNG — now cached at the edge
-          }
+          // `x-og: render` marks a genuine render (the fallback card is also
+          // image/png, so content-type alone can't tell them apart; the old
+          // content-length gate also broke on bodies without that header).
+          const rendered = r.ok && r.headers.get('x-og') === 'render'
+          // Drain the body either way so the subrequest connection is released.
+          await r.arrayBuffer().catch(() => {})
+          if (rendered) return // a real PNG — now cached at the edge
         } catch {
           /* transient — retry */
         }

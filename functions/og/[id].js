@@ -121,7 +121,14 @@ export const onRequestGet = async ({ params, env, request, waitUntil }) => {
   // Cache key includes the ?v=ticketNo so a re-issued ticket renders fresh.
   const cacheKey = new Request(request.url, { method: 'GET' })
 
-  const hit = await cache.match(cacheKey)
+  // Treat a cache-storage error as a miss, not a 500 — the whole point is that
+  // a card ALWAYS comes back, so cache.match must not throw out of the handler.
+  let hit
+  try {
+    hit = await cache.match(cacheKey)
+  } catch {
+    /* miss — fall through to render/fallback */
+  }
   if (hit) return hit
 
   if (!env.FIREBASE_PROJECT_ID) return genericCard(origin)
@@ -247,6 +254,10 @@ const render = async (params, env, origin, cache, waitUntil, cacheKey) => {
   const png = await img.arrayBuffer()
   const headers = new Headers(img.headers)
   headers.set('cache-control', IMG_CC)
+  // Marks a REAL render (vs the genericCard fallback, which is also image/png).
+  // The /t warm loop keys off this so it keeps retrying past a fallback until a
+  // genuine render is cached.
+  headers.set('x-og', 'render')
   const res = new Response(png, { status: 200, headers })
   waitUntil(cache.put(cacheKey, res.clone()))
   return res

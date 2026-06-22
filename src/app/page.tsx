@@ -171,6 +171,10 @@ function Hero({ compact = false }: { compact?: boolean }) {
             </a>
           </p>
           <p>
+            🎟️ 当日 <span className="font-bold">{FEE.regular.toLocaleString()}円</span>・事前{" "}
+            <span className="font-bold">{FEE.early.toLocaleString()}円</span>
+          </p>
+          <p>
             <a
               href={CAL_URL}
               target="_blank"

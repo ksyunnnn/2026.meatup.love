@@ -179,9 +179,9 @@ function Hero({ compact = false }: { compact?: boolean }) {
               href={CAL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[13px] underline-offset-2 hover:underline"
+              className="text-[13px] underline underline-offset-2"
             >
-              📅 カレンダーに追加
+              ＋ カレンダーに追加
             </a>
           </p>
         </div>
@@ -354,7 +354,7 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="font-bold text-meat underline underline-offset-2 block"
               >
-                📅 カレンダーに追加
+                ＋ カレンダーに追加
               </a>
             </p>
           </JoinStep>

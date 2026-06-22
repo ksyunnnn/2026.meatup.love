@@ -2,6 +2,9 @@ import {
   doc,
   getDocs,
   setDoc,
+  updateDoc,
+  deleteDoc,
+  deleteField,
   collection,
   query,
   where,
@@ -53,6 +56,24 @@ export async function listInvites(): Promise<InviteWithToken[]> {
   const q = query(collection(db, 'invites'), where('edition', '==', EDITION))
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ token: d.id, ...(d.data() as Invite) }))
+}
+
+/** Revoke an unused invite by deleting it. Deletion is the revoke: validInvite()
+ *  in firestore.rules checks exists(), so a gone doc can no longer be consumed.
+ *  Safe only for unused links — no attendee's inviteToken points at them. */
+export async function deleteInvite(token: string) {
+  await deleteDoc(doc(db, 'invites', token))
+}
+
+/** Archive a used invite: hide it from the active list without deleting it, so
+ *  the attendee's referral attribution (which reads this doc by token) survives. */
+export async function archiveInvite(token: string) {
+  await updateDoc(doc(db, 'invites', token), { archivedAt: serverTimestamp() })
+}
+
+/** Bring an archived invite back into the active list. */
+export async function unarchiveInvite(token: string) {
+  await updateDoc(doc(db, 'invites', token), { archivedAt: deleteField() })
 }
 
 /** Invites issued by a given user (FR9: an attendee's own invite slots). */

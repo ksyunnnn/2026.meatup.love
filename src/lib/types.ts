@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore'
 
-export type AttendeeStatus = 'pending' | 'approved' | 'rejected'
+export type AttendeeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
 
 /** A registered guest. Firestore document id == Firebase Auth uid. */
 export interface Attendee {
@@ -25,6 +25,11 @@ export interface Attendee {
   createdAt: Timestamp
   approvedAt?: Timestamp
   approvedBy?: string // admin uid that approved
+  // The host records a guest's cancellation here (off-app: the guest tells the
+  // host via the contact channel). cancelledFrom remembers the status to return
+  // to if "参加に戻す" is used. Cancelled guests leave the active roster/tallies.
+  cancelledAt?: Timestamp
+  cancelledFrom?: AttendeeStatus
 }
 
 /** An invite the host issues. Firestore document id == the unguessable token. */
@@ -35,4 +40,8 @@ export interface Invite {
   issuedBy: string // uid that created it (admin now; attendee-with-quota later — FR9)
   usedBy?: string // attendee uid that consumed it
   createdAt: Timestamp
+  // Used invites can't be deleted (an attendee's inviteToken still points here
+  // for referral attribution), so the host archives them to declutter the list.
+  // Unused invites are deleted outright instead (that also revokes the link).
+  archivedAt?: Timestamp
 }

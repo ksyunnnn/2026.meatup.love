@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Timestamp } from 'firebase/firestore'
 import { useAuth } from '@/lib/use-auth'
 import { Loading } from '@/components/load-state'
 import {
@@ -10,17 +11,20 @@ import {
   approveAttendee,
   setPaid,
   setGender,
+  cancelAttendee,
+  restoreAttendee,
   type AttendeeWithId,
 } from '@/lib/attendees'
-import { createInvite, listInvites, type InviteWithToken } from '@/lib/invites'
+import {
+  createInvite,
+  listInvites,
+  deleteInvite,
+  archiveInvite,
+  unarchiveInvite,
+  type InviteWithToken,
+} from '@/lib/invites'
 import { JOBS } from '@/lib/profile'
-import type { AttendeeStatus } from '@/lib/types'
-
-const STATUS_LABEL: Record<AttendeeStatus, string> = {
-  pending: '受付（確認待ち）',
-  approved: '確定 ✅',
-  rejected: '却下',
-}
+import type { Attendee, AttendeeStatus } from '@/lib/types'
 
 // "What are you looking forward to" — keys map to the register form chips.
 const EXP_EMOJI: Record<string, string> = {
@@ -39,6 +43,26 @@ const rowCls = 'flex items-center gap-3 rounded-[8px] border border-line bg-pape
 const subCls = 'ml-2 text-[12px] text-ink-soft'
 const btnSm = 'min-h-10 whitespace-nowrap px-4 py-2'
 const emptyCls = 'text-[14px] text-ink-soft'
+// Destructive (HIG: red, never the hero). Quiet outline, not a filled button.
+const dangerBtn =
+  'min-h-9 whitespace-nowrap rounded-pill border border-meat-dark px-3 py-1 text-[12px] text-meat-dark'
+// Even quieter: a rarely-used destructive action that shouldn't compete with
+// the everyday controls. Plain text, recedes until hovered.
+const quietDanger =
+  'whitespace-nowrap text-[11px] text-ink-soft underline-offset-2 hover:text-meat-dark hover:underline disabled:no-underline'
+
+function ms(ts?: Timestamp): number {
+  return ts ? ts.toMillis() : 0
+}
+
+// "6/22 14:30" — compact, the admin only needs day + time at a glance.
+function fmtDate(ts?: Timestamp): string {
+  if (!ts) return ''
+  const d = ts.toDate()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mi}`
+}
 
 function inviteUrl(inv: InviteWithToken): string {
   const qs = new URLSearchParams()
@@ -46,6 +70,71 @@ function inviteUrl(inv: InviteWithToken): string {
   if (inv.job) qs.set('job', inv.job)
   qs.set('t', inv.token)
   return `${window.location.origin}/invite?${qs.toString()}`
+}
+
+/**
+ * One card, used in every section so a guest looks the same wherever they
+ * appear. The identity + meta block (name/job/No./referral/expectations/contact/
+ * kids/allergy) is IDENTICAL everywhere; only the footer — the timestamp `stamp`
+ * and the stage-appropriate `controls` — changes by section (design axis 6:
+ * 状態で出し分け). Presentational: the caller computes referral and passes controls.
+ */
+function AttendeeCard({
+  a,
+  referral,
+  stamp,
+  controls,
+  dim,
+}: {
+  a: AttendeeWithId
+  referral: string
+  stamp: React.ReactNode
+  controls?: React.ReactNode
+  dim?: boolean
+}) {
+  return (
+    <li
+      className={`grid gap-2 rounded-[8px] border border-line bg-paper px-4 py-3 ${
+        dim ? 'opacity-60' : ''
+      }`}
+    >
+      <div className="flex items-baseline gap-2">
+        <span className="min-w-0 font-bold">
+          {a.name}
+          {a.job ? (
+            <span className="ml-1 font-normal text-ink-soft">
+              （{a.job}
+              {a.jobOther ? `／${a.jobOther}` : ''}）
+            </span>
+          ) : null}
+        </span>
+        <span className="ml-auto whitespace-nowrap text-[12px] tabular-nums text-ink-soft">
+          No. {a.ticketNo}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-soft">
+        <span>{referral}</span>
+        {a.expectations?.length ? (
+          <span>{a.expectations.map((k) => EXP_EMOJI[k] ?? '').join('')}</span>
+        ) : null}
+        {a.contactMethod ? (
+          <span>
+            {a.contactMethod}: {a.contactValue ?? '—'}
+          </span>
+        ) : null}
+        {a.withKids ? <span>🧒 子連れ</span> : null}
+        {a.hasAllergy ? <span>⚠️ {a.allergyNote ?? 'アレルギー'}</span> : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[12px] text-ink-soft">{stamp}</span>
+        {controls ? (
+          <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {controls}
+          </span>
+        ) : null}
+      </div>
+    </li>
+  )
 }
 
 export default function AdminPage() {
@@ -59,6 +148,8 @@ export default function AdminPage() {
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [showCancelled, setShowCancelled] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   useEffect(() => {
     if (loading || !user) return
@@ -84,14 +175,16 @@ export default function AdminPage() {
     }
   }, [loading, user])
 
+  function patch(uid: string, fields: Partial<Attendee>) {
+    setAttendees((prev) => prev.map((p) => (p.id === uid ? { ...p, ...fields } : p)))
+  }
+
   async function handleApprove(uid: string) {
     if (!user) return
     setBusy(uid)
     try {
       await approveAttendee(uid, user.uid)
-      setAttendees((prev) =>
-        prev.map((p) => (p.id === uid ? { ...p, status: 'approved' } : p)),
-      )
+      patch(uid, { status: 'approved', approvedAt: Timestamp.now(), approvedBy: user.uid })
     } catch (err) {
       console.error(err)
     } finally {
@@ -104,7 +197,7 @@ export default function AdminPage() {
     setBusy(uid)
     try {
       await setPaid(uid, paid)
-      setAttendees((prev) => prev.map((p) => (p.id === uid ? { ...p, paid } : p)))
+      patch(uid, { paid })
     } catch (err) {
       console.error(err)
     } finally {
@@ -117,9 +210,39 @@ export default function AdminPage() {
     setBusy(uid)
     try {
       await setGender(uid, gender)
-      setAttendees((prev) =>
-        prev.map((p) => (p.id === uid ? { ...p, gender: gender || undefined } : p)),
-      )
+      patch(uid, { gender: gender || undefined })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function handleCancel(a: AttendeeWithId) {
+    if (!user) return
+    const from: AttendeeStatus = a.status === 'cancelled' ? 'pending' : a.status
+    if (
+      !window.confirm(`${a.name} さんをキャンセルとして記録しますか？（あとで「参加に戻す」で戻せます）`)
+    )
+      return
+    setBusy(a.id)
+    try {
+      await cancelAttendee(a.id, from)
+      patch(a.id, { status: 'cancelled', cancelledAt: Timestamp.now(), cancelledFrom: from })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function handleRestore(a: AttendeeWithId) {
+    if (!user) return
+    const to: AttendeeStatus = a.cancelledFrom ?? 'pending'
+    setBusy(a.id)
+    try {
+      await restoreAttendee(a.id, to)
+      patch(a.id, { status: to, cancelledAt: undefined, cancelledFrom: undefined })
     } catch (err) {
       console.error(err)
     } finally {
@@ -153,6 +276,39 @@ export default function AdminPage() {
     }
   }
 
+  // Unused invite: deletion IS the revoke (validInvite() checks exists()).
+  async function handleDeleteInvite(inv: InviteWithToken) {
+    if (!window.confirm(`未使用の招待リンク「${inv.name ?? '名前なし'}」を取り消しますか？（リンクは使えなくなります）`))
+      return
+    setBusy(inv.token)
+    try {
+      await deleteInvite(inv.token)
+      setInvites((prev) => prev.filter((i) => i.token !== inv.token))
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  // Used invite: archive (keep the doc so referral attribution survives).
+  async function handleArchiveInvite(token: string, archive: boolean) {
+    setBusy(token)
+    try {
+      if (archive) await archiveInvite(token)
+      else await unarchiveInvite(token)
+      setInvites((prev) =>
+        prev.map((i) =>
+          i.token === token ? { ...i, archivedAt: archive ? Timestamp.now() : undefined } : i,
+        ),
+      )
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   if (loading || (user && !checked)) {
     return <Loading className={wrapCls} />
   }
@@ -176,19 +332,33 @@ export default function AdminPage() {
     )
   }
 
-  const pending = attendees.filter((a) => a.status === 'pending')
-  const paidCount = attendees.filter((a) => a.paid).length
+  // Cancelled guests leave the active roster and every tally.
+  const cancelled = attendees
+    .filter((a) => a.status === 'cancelled')
+    .sort((x, y) => ms(y.cancelledAt) - ms(x.cancelledAt))
+  const activeAll = attendees.filter((a) => a.status !== 'cancelled')
+
+  // Both lists ordered by registration time, newest first (most recent
+  // sign-ups surface at the top).
+  const byCreated = (x: AttendeeWithId, y: AttendeeWithId) => ms(y.createdAt) - ms(x.createdAt)
+  const pending = activeAll.filter((a) => a.status === 'pending').sort(byCreated)
+  const roster = [...activeAll].sort(byCreated)
+
+  const paidCount = activeAll.filter((a) => a.paid).length
   const expCounts = EXP_ORDER.map((k) => ({
     emoji: EXP_EMOJI[k],
-    n: attendees.filter((a) => a.expectations?.includes(k)).length,
+    n: activeAll.filter((a) => a.expectations?.includes(k)).length,
   }))
   // Gender isn't asked at registration — the host sets it here. Track assignment
   // progress (and feed the public Data aggregation later).
   const genderCounts = ['男', '女', 'その他'].map((g) => ({
     g,
-    n: attendees.filter((a) => a.gender === g).length,
+    n: activeAll.filter((a) => a.gender === g).length,
   }))
-  const genderUnset = attendees.filter((a) => !a.gender).length
+  const genderUnset = activeAll.filter((a) => !a.gender).length
+
+  const activeInvites = invites.filter((i) => !i.archivedAt)
+  const archivedInvites = invites.filter((i) => i.archivedAt)
 
   // Referral source, derived from the invite link they used (no manual input):
   // host-issued → "運営の招待", attendee-issued → "◯◯ さんの招待", none → "飛び込み".
@@ -202,8 +372,31 @@ export default function AdminPage() {
     return issuerName ? `${issuerName} さんの招待` : '運営の招待'
   }
 
+  const genderSelect = (a: AttendeeWithId) => (
+    <label className="flex items-center gap-1 text-[12px] text-ink-soft">
+      性別
+      <select
+        className="rounded-[6px] border border-line bg-white px-1.5 py-1 text-[12px]"
+        value={a.gender ?? ''}
+        onChange={(e) => handleSetGender(a.id, e.target.value)}
+        disabled={busy === a.id}
+      >
+        <option value="">未設定</option>
+        <option value="男">男</option>
+        <option value="女">女</option>
+        <option value="その他">その他</option>
+      </select>
+    </label>
+  )
+
   return (
     <main className={wrapCls}>
+      <Link
+        href="/"
+        className="justify-self-start text-[13px] text-ink-soft underline-offset-2 hover:text-meat hover:underline"
+      >
+        ← トップへ
+      </Link>
       <h1 className="text-[26px] font-extrabold">管理 🍖</h1>
 
       <section className={sectionCls}>
@@ -213,21 +406,21 @@ export default function AdminPage() {
         ) : (
           <ul className={listCls}>
             {pending.map((p) => (
-              <li key={p.id} className={rowCls}>
-                <span className="min-w-0">
-                  {p.name}
-                  {p.job ? `（${p.job}）` : ''}
-                  <span className={subCls}>No. {p.ticketNo}</span>
-                  <span className={subCls}>{referral(p)}</span>
-                </span>
-                <button
-                  className={`btn btn--primary ml-auto ${btnSm}`}
-                  onClick={() => handleApprove(p.id)}
-                  disabled={busy === p.id}
-                >
-                  {busy === p.id ? '確認中…' : '確認しました！'}
-                </button>
-              </li>
+              <AttendeeCard
+                key={p.id}
+                a={p}
+                referral={referral(p)}
+                stamp={`登録 ${fmtDate(p.createdAt)}`}
+                controls={
+                  <button
+                    className={`btn btn--primary ${btnSm}`}
+                    onClick={() => handleApprove(p.id)}
+                    disabled={busy === p.id}
+                  >
+                    {busy === p.id ? '確認中…' : '確認しました！'}
+                  </button>
+                }
+              />
             ))}
           </ul>
         )}
@@ -258,110 +451,178 @@ export default function AdminPage() {
             {creating ? '作成中…' : '作成'}
           </button>
         </form>
-        {invites.length > 0 && (
+        {activeInvites.length > 0 && (
           <ul className={listCls}>
-            {invites.map((inv) => {
+            {activeInvites.map((inv) => {
               const url = inviteUrl(inv)
+              const used = !!inv.usedBy
               return (
                 <li key={inv.token} className={rowCls}>
                   <span className="min-w-0">
                     {inv.name ?? '（名前なし）'}
                     {inv.job ? <span className={subCls}>{inv.job}</span> : null}
-                    <span className={subCls}>{inv.usedBy ? '使用済み' : '未使用'}</span>
+                    <span className={subCls}>{used ? '使用済み' : '未使用'}</span>
                   </span>
-                  <button
-                    className={`btn ml-auto ${btnSm}`}
-                    onClick={() => handleCopy(url, inv.token)}
-                    disabled={!!inv.usedBy}
-                    title={url}
-                  >
-                    {copied === inv.token ? 'コピー済み' : 'リンクをコピー'}
-                  </button>
+                  {used ? (
+                    // Consumed link: archive to declutter (the doc is kept so the
+                    // attendee's referral attribution still resolves).
+                    <button
+                      className={`btn ml-auto ${btnSm}`}
+                      onClick={() => handleArchiveInvite(inv.token, true)}
+                      disabled={busy === inv.token}
+                    >
+                      アーカイブ
+                    </button>
+                  ) : (
+                    <span className="ml-auto flex items-center gap-2">
+                      <button
+                        className={`btn ${btnSm}`}
+                        onClick={() => handleCopy(url, inv.token)}
+                        title={url}
+                      >
+                        {copied === inv.token ? 'コピー済み' : 'リンクをコピー'}
+                      </button>
+                      <button
+                        className={dangerBtn}
+                        onClick={() => handleDeleteInvite(inv)}
+                        disabled={busy === inv.token}
+                      >
+                        取り消す
+                      </button>
+                    </span>
+                  )}
                 </li>
               )
             })}
           </ul>
         )}
+        {archivedInvites.length > 0 && (
+          <div className="grid gap-2">
+            <button
+              className="justify-self-start text-[13px] text-ink-soft underline-offset-2 hover:text-meat hover:underline"
+              onClick={() => setShowArchived((v) => !v)}
+            >
+              アーカイブ済み（{archivedInvites.length}）{showArchived ? '▲' : '▼'}
+            </button>
+            {showArchived && (
+              <ul className={listCls}>
+                {archivedInvites.map((inv) => (
+                  <li key={inv.token} className={`${rowCls} opacity-60`}>
+                    <span className="min-w-0">
+                      {inv.name ?? '（名前なし）'}
+                      {inv.job ? <span className={subCls}>{inv.job}</span> : null}
+                      <span className={subCls}>使用済み</span>
+                    </span>
+                    <button
+                      className={`btn ml-auto ${btnSm}`}
+                      onClick={() => handleArchiveInvite(inv.token, false)}
+                      disabled={busy === inv.token}
+                    >
+                      戻す
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </section>
 
       <section className={sectionCls}>
         <h2 className={h2Cls}>
-          参加者一覧（{attendees.length}・支払い済み {paidCount}）
+          参加者一覧（{activeAll.length}・支払い済み {paidCount}）
         </h2>
-        {attendees.length > 0 && (
+        {activeAll.length > 0 && (
           <p className="text-[12px] text-ink-soft">
             楽しみ：{expCounts.map((c) => `${c.emoji}${c.n}`).join('　')}
           </p>
         )}
-        {attendees.length > 0 && (
+        {activeAll.length > 0 && (
           <p className="text-[12px] text-ink-soft">
             性別：{genderCounts.map((c) => `${c.g}${c.n}`).join('　')}　未設定
             {genderUnset}
           </p>
         )}
-        {attendees.length === 0 ? (
+        {roster.length === 0 ? (
           <p className={emptyCls}>まだいません。</p>
         ) : (
           <ul className={listCls}>
-            {attendees.map((a) => (
-              <li
+            {roster.map((a) => (
+              <AttendeeCard
                 key={a.id}
-                className="grid gap-2 rounded-[8px] border border-line bg-paper px-4 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="min-w-0 flex-1">
-                    {a.name}
-                    {a.job ? `（${a.job}${a.jobOther ? `／${a.jobOther}` : ''}）` : ''}
-                    {a.expectations?.length ? (
-                      <span className={subCls}>
-                        {a.expectations.map((k) => EXP_EMOJI[k] ?? '').join('')}
-                      </span>
-                    ) : null}
-                    <span className={subCls}>{referral(a)}</span>
-                  </span>
-                  <span className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="text-[12px] text-ink-soft">{STATUS_LABEL[a.status]}</span>
-                    <button
-                      className={`${btnSm} rounded-pill border-2 text-[12px] ${
-                        a.paid
-                          ? 'border-meat bg-meat text-white'
-                          : 'border-line text-ink-soft'
-                      }`}
-                      onClick={() => handleTogglePaid(a.id, !a.paid)}
-                      disabled={busy === a.id}
-                    >
-                      {a.paid ? '✓ 払った' : '未払い'}
-                    </button>
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-soft">
-                  {a.contactMethod ? (
-                    <span>
-                      {a.contactMethod}: {a.contactValue ?? '—'}
+                a={a}
+                referral={referral(a)}
+                stamp={
+                  a.status === 'approved' ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-meat">●</span>確定 {fmtDate(a.approvedAt)}
                     </span>
-                  ) : null}
-                  {a.withKids ? <span>🧒 子連れ</span> : null}
-                  {a.hasAllergy ? <span>⚠️ {a.allergyNote ?? 'アレルギー'}</span> : null}
-                  <label className="ml-auto flex items-center gap-1">
-                    性別
-                    <select
-                      className="rounded-[6px] border border-line bg-white px-1.5 py-1 text-[12px]"
-                      value={a.gender ?? ''}
-                      onChange={(e) => handleSetGender(a.id, e.target.value)}
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-ink-soft">
+                      <span>○</span>未確定
+                    </span>
+                  )
+                }
+                controls={
+                  <>
+                    {genderSelect(a)}
+                    <label className="flex items-center gap-1.5 text-[12px] text-ink-soft">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-meat"
+                        checked={!!a.paid}
+                        onChange={(e) => handleTogglePaid(a.id, e.target.checked)}
+                        disabled={busy === a.id}
+                      />
+                      支払い済み
+                    </label>
+                    <button
+                      className={quietDanger}
+                      onClick={() => handleCancel(a)}
                       disabled={busy === a.id}
                     >
-                      <option value="">未設定</option>
-                      <option value="男">男</option>
-                      <option value="女">女</option>
-                      <option value="その他">その他</option>
-                    </select>
-                  </label>
-                </div>
-              </li>
+                      キャンセル受付
+                    </button>
+                  </>
+                }
+              />
             ))}
           </ul>
         )}
       </section>
+
+      {cancelled.length > 0 && (
+        <section className={sectionCls}>
+          <button
+            className="flex items-center gap-2 justify-self-start text-[15px] font-bold text-ink-soft"
+            onClick={() => setShowCancelled((v) => !v)}
+          >
+            キャンセル（{cancelled.length}）{showCancelled ? '▲' : '▼'}
+          </button>
+          {showCancelled && (
+            <ul className={listCls}>
+              {cancelled.map((a) => (
+                <AttendeeCard
+                  key={a.id}
+                  a={a}
+                  dim
+                  referral={referral(a)}
+                  stamp={`キャンセル ${fmtDate(a.cancelledAt)}`}
+                  controls={
+                    <button
+                      className={`btn ${btnSm}`}
+                      onClick={() => handleRestore(a)}
+                      disabled={busy === a.id}
+                    >
+                      参加に戻す
+                    </button>
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </main>
   )
 }

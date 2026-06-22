@@ -168,6 +168,27 @@ export async function approveAttendee(uid: string, adminUid: string) {
   })
 }
 
+/** Host records a guest's cancellation (heard off-app via the contact channel).
+ *  Remembers the prior status so 参加に戻す can restore it. Cancelled guests drop
+ *  out of the active roster and tallies. */
+export async function cancelAttendee(uid: string, from: AttendeeStatus) {
+  await updateDoc(doc(db, 'attendees', uid), {
+    status: 'cancelled' as AttendeeStatus,
+    cancelledAt: serverTimestamp(),
+    cancelledFrom: from,
+  })
+}
+
+/** Undo a cancellation: restore the status the guest had before cancelling
+ *  (falls back to pending if unknown). */
+export async function restoreAttendee(uid: string, to: AttendeeStatus) {
+  await updateDoc(doc(db, 'attendees', uid), {
+    status: to,
+    cancelledAt: deleteField(),
+    cancelledFrom: deleteField(),
+  })
+}
+
 /** Whether this uid is a host (presence of admins/{uid}). */
 export async function isAdmin(uid: string): Promise<boolean> {
   const snap = await getDoc(doc(db, 'admins', uid))

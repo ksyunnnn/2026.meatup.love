@@ -41,10 +41,12 @@ export interface CreateAttendeeInput {
  * pending too. Runs in a transaction so a single invite link is consumed once;
  * concurrent uses retry and fall back to pending.
  */
-export async function createAttendee(input: CreateAttendeeInput) {
+export async function createAttendee(
+  input: CreateAttendeeInput,
+): Promise<{ ticketNo: string; status: AttendeeStatus }> {
   const ticketNo = generateTicketNo()
 
-  await runTransaction(db, async (tx) => {
+  return runTransaction(db, async (tx) => {
     // All reads must precede writes in a Firestore transaction.
     let approved = false
     let inviteToConsume: ReturnType<typeof doc> | null = null
@@ -107,6 +109,10 @@ export async function createAttendee(input: CreateAttendeeInput) {
     if (input.expectations && input.expectations.length > 0)
       share.expectations = input.expectations
     tx.set(doc(db, 'shares', input.uid), share)
+
+    // Surface the assigned number + resolved status so the caller (the register
+    // completion screen) can render the ticket immediately without a refetch.
+    return { ticketNo, status }
   })
 }
 

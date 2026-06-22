@@ -8,8 +8,11 @@ import { useAuth } from '@/lib/use-auth'
 import { createAttendee, getMyAttendee } from '@/lib/attendees'
 import { JOBS } from '@/lib/profile'
 import { CONTACTS } from '@/lib/contacts'
-import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
+import { LineIcon, InstagramIcon, TwitterIcon, ShareIcon } from '@/components/icons'
 import { Loading } from '@/components/load-state'
+import TicketCard from '@/components/ticket-card'
+import { displayRole, expectationChars } from '@/lib/ticket'
+import { useTicketShare } from '@/lib/use-ticket-share'
 
 // Map a registration (createAttendee) failure to an honest, cause-specific
 // message. createAttendee runs a Firestore transaction, so failures surface as
@@ -85,6 +88,10 @@ export default function RegisterClient() {
   // [B] picks the "add the host's LINE" radio (value LINE_ADD): no contact is
   // stored; the add link is shown on the completion screen after submit.
   const [done, setDone] = useState(false)
+  // Ticket number assigned at registration → shown on the completion screen's
+  // ticket without a refetch (createAttendee returns it).
+  const [ticketNo, setTicketNo] = useState('')
+  const { share: shareTicket, copied } = useTicketShare(user?.uid, ticketNo)
   const [withKids, setWithKids] = useState(false)
   const [hasAllergy, setHasAllergy] = useState(false)
   const [allergyNote, setAllergyNote] = useState('')
@@ -145,7 +152,7 @@ export default function RegisterClient() {
     setSubmitting(true)
     setError('')
     try {
-      await createAttendee({
+      const res = await createAttendee({
         uid: user.uid,
         authName: user.email ?? user.displayName ?? user.uid,
         name,
@@ -161,9 +168,11 @@ export default function RegisterClient() {
         allergyNote: hasAllergy ? allergyNote.trim() || undefined : undefined,
         inviteToken: token || undefined,
       })
-      // [B] → completion screen (offers the LINE add). [A] → /mypage as before.
-      if (useLine) setDone(true)
-      else router.push('/mypage')
+      // Both paths now land on the completion screen: celebrate + show the
+      // ticket + prompt an SNS share at the high-intent moment. (LINE path also
+      // surfaces the LINE add there.)
+      setTicketNo(res.ticketNo)
+      setDone(true)
     } catch (err) {
       const code = err instanceof FirebaseError ? err.code : 'unknown'
       console.error('[meatup] register failed', code, err)
@@ -177,54 +186,100 @@ export default function RegisterClient() {
     return <Loading className="flex min-h-dvh items-center justify-center px-4 py-6" />
   }
 
-  // [B] completion screen: the signup is already saved, so offering the LINE add
-  // here means opening LINE can never lose the registration.
+  // Completion screen (both contact paths). The signup is already saved, so this
+  // is the moment to (1) [LINE path] secure reachability, (2) reveal the ticket,
+  // (3) prompt an SNS share. LINE add comes FIRST when chosen — reachability is
+  // the must-do; the share is the nice-to-have that can wait below it.
   if (done) {
+    const useLine = contactMethod === LINE_ADD
+    const role = displayRole(job, jobOther)
+    const chars = expectationChars(expectations)
+    const shareUrl = `${window.location.origin}/t/${user.uid}`
     return (
-      <main className="flex min-h-dvh items-center justify-center px-4 py-6">
-        <div className="card w-full max-w-[400px] text-center">
-          <h1 className="text-[24px] font-extrabold">うれし〜🎉</h1>
-          <p className="mt-3 text-[14px] text-ink-soft">
-            最後に、LINE追加よろしゅう！連絡手段ないと詰むので🥹
-          </p>
-          <a
-            href={CONTACTS.line}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn--primary btn--block mx-auto mt-5 inline-flex max-w-[320px] items-center justify-center gap-2"
-          >
-            <LineIcon className="h-[18px] w-[18px]" />
-            運営のLINEを追加する
-          </a>
-          <p className="mt-2 text-[12px] text-ink-soft">これ無理やったらSNSで連絡ほしい！ごめんなさい🙏</p>
-          <p className="mt-1 flex items-center justify-center gap-1">
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 px-4 py-6">
+        {useLine && (
+          <div className="card w-full max-w-[400px] text-center">
+            <h2 className="text-[18px] font-extrabold">最後にLINE追加だけ！🥹</h2>
+            <p className="mt-2 text-[13px] text-ink-soft">
+              連絡手段がないと運営から連絡できないので…！
+            </p>
             <a
-              href={CONTACTS.instagram}
+              href={CONTACTS.line}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Instagram で連絡"
-              className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
+              className="btn btn--primary btn--block mx-auto mt-4 inline-flex max-w-[320px] items-center justify-center gap-2"
             >
-              <InstagramIcon className="h-[22px] w-[22px]" />
+              <LineIcon className="h-[18px] w-[18px]" />
+              運営のLINEを追加する
             </a>
-            <a
-              href={CONTACTS.twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Twitter で連絡"
-              className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
-            >
-              <TwitterIcon className="h-[22px] w-[22px]" />
-            </a>
+            <p className="mt-2 text-[12px] text-ink-soft">これ無理やったらSNSで連絡ほしい！🙏</p>
+            <p className="mt-1 flex items-center justify-center gap-1">
+              <a
+                href={CONTACTS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram で連絡"
+                className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
+              >
+                <InstagramIcon className="h-[22px] w-[22px]" />
+              </a>
+              <a
+                href={CONTACTS.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Twitter で連絡"
+                className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
+              >
+                <TwitterIcon className="h-[22px] w-[22px]" />
+              </a>
+            </p>
+          </div>
+        )}
+
+        <div className="text-center">
+          <h1 className="text-[24px] font-extrabold">登録できたよ〜🎉</h1>
+          <p className="mt-2 text-[14px] text-ink-soft">
+            チケット発行！SNSで「参加します」広めてくれたら最高に嬉しい🍖
           </p>
-          <button
-            type="button"
-            onClick={() => router.push('/mypage')}
-            className="mt-3 text-[13px] font-bold text-ink-soft underline underline-offset-2"
-          >
-            マイページへ →
-          </button>
         </div>
+
+        <div className="ticket-reveal w-full">
+          <div className="mx-auto flex max-w-[540px] justify-center">
+            <TicketCard
+              name={name}
+              role={role}
+              chars={chars}
+              ticketNo={ticketNo}
+              shareUrl={shareUrl}
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={shareTicket}
+          className="btn btn--primary btn--block mx-auto inline-flex max-w-[320px] items-center justify-center gap-2"
+        >
+          <ShareIcon className="h-[18px] w-[18px]" />
+          シェアする
+        </button>
+        <p
+          className={
+            'text-[13px] font-bold text-ink-soft transition-opacity ' +
+            (copied ? 'opacity-100' : 'opacity-0')
+          }
+          aria-live="polite"
+        >
+          リンクをコピーしました ✓
+        </p>
+
+        <button
+          type="button"
+          onClick={() => router.push('/mypage')}
+          className="text-[13px] font-bold text-ink-soft underline underline-offset-2"
+        >
+          マイページへ →
+        </button>
       </main>
     )
   }

@@ -6,8 +6,10 @@
 // the message, so there's also no SSR/hydration mismatch. The intent always carries
 // the canonical URL + #meatup2026 (URL resolves once the apex is connected).
 import type { MouseEvent } from 'react'
+// Taglines live in one shared place so the top page and the ticket share stay
+// in sync — adding one there reflects here automatically.
+import { SHARE_TAGLINES, pickTagline } from '@/lib/share'
 
-const MESSAGES = ['お肉を食べにいきます🍖', 'オレ、ニク、クウ🦍']
 const SITE_URL = 'https://meatup.love'
 const HASHTAGS = 'meatup2026'
 
@@ -28,15 +30,14 @@ const chip =
 export function TweetChip() {
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
-    const text = MESSAGES[Math.floor(Math.random() * MESSAGES.length)]
-    window.open(intentUrl(text), '_blank', 'noopener,noreferrer')
+    window.open(intentUrl(pickTagline()), '_blank', 'noopener,noreferrer')
   }
 
   // href = a deterministic fallback (first message) for no-JS / middle-click / copy;
   // onClick overrides it with a random pick.
   return (
     <a
-      href={intentUrl(MESSAGES[0])}
+      href={intentUrl(SHARE_TAGLINES[0])}
       onClick={onClick}
       target="_blank"
       rel="noopener noreferrer"

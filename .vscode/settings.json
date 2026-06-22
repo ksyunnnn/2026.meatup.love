@@ -1,0 +1,18 @@
+{
+  // Tailwind CSS IntelliSense の "suggestCanonicalClasses" 診断を無効化。
+  //
+  // 経緯: この診断は `max-w-[380px]` を `max-w-95` のような組み込みトークンへ
+  // 書き換えるよう促すが、本プロジェクトの px 任意値は意図的なもの:
+  //   - 旧 *.module.css からの忠実な Tailwind 移行の産物（commit 9301fea）。
+  //     `max-width:380px` → `max-w-[380px]` と 1:1 で持ち込んでおり、元の素CSSと
+  //     寸法が一致して追える。`max-w-95`(=380÷0.25rem) では対応が読めなくなる。
+  //   - 設計の基準が Apple HIG + WCAG で寸法は px 思考（DESIGN.md §0）。
+  //   - font-size は `text-[24px]` 等で「サイズだけ」指定（組み込み text-2xl 等は
+  //     line-height を巻き込むため等価でない）。半端な値(13/15px)は組み込みに該当なし。
+  //   - px→rem 化は root font-size 追従の a11y 挙動も変える。
+  // さらに診断自体が誤検知の多い未成熟機能（intellisense issue #1527 / #1548 で
+  // 存在しない値・単位違いを提案するバグが報告）。
+  // よって「コードは曲げず診断を黙らせる」を選択（no-img-element を理由つきで
+  // 抑止したのと同じ方針）。値を組み込みへ寄せたくなったら "warning" に戻せばよい。
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore"
+}

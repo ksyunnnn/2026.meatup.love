@@ -266,10 +266,13 @@ export default function TicketCard({
           }}
         >
           {/* oniku — the shared brand mark */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- static export + images.unoptimized: next/image emits the same tag with zero optimization, and this card mirrors the OG art. */}
           <img src="/oniku.svg" alt="" style={{ width: q(92), height: q(92) }} />
           {/* QR encodes the share URL so a scanned ticket lands on the event.
               Rendered via <img> (not raw SVG) so the fixed-size QR scales to the
-              cqw box via its viewBox — same approach as the OG image. */}
+              cqw box via its viewBox — same approach as the OG image. `qr` is a
+              runtime data: URL, which next/image cannot optimize regardless. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- see above: data: URL under static export. */}
           <img src={qr} alt="" style={{ width: q(168), height: q(168) }} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div

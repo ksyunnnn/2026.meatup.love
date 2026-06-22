@@ -83,6 +83,29 @@ describe('attendees', () => {
     const other = testEnv.authenticatedContext('other').firestore()
     await assertFails(getDoc(doc(other, 'attendees/u1')))
   })
+
+  it('an admin may create a manual roster entry; a non-admin cannot create for others', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin1'), {})
+    })
+    // Admin adds someone who won't self-register (synthetic id, approved).
+    const admin = testEnv.authenticatedContext('admin1').firestore()
+    await assertSucceeds(
+      setDoc(doc(admin, 'attendees/manual_abc'), {
+        ...attendee('approved'),
+        addedByAdmin: true,
+        approvedBy: 'admin1',
+      }),
+    )
+    // A non-admin still cannot create a doc that isn't their own uid.
+    const u1 = testEnv.authenticatedContext('u1').firestore()
+    await assertFails(
+      setDoc(doc(u1, 'attendees/manual_xyz'), {
+        ...attendee('approved'),
+        addedByAdmin: true,
+      }),
+    )
+  })
 })
 
 describe('invites (single-use)', () => {

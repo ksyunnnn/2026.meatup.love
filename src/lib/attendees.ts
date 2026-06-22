@@ -2,6 +2,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  setDoc,
   updateDoc,
   runTransaction,
   collection,
@@ -9,6 +10,7 @@ import {
   where,
   serverTimestamp,
   deleteField,
+  Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Attendee, AttendeeStatus } from './types'
@@ -187,6 +189,78 @@ export async function restoreAttendee(uid: string, to: AttendeeStatus) {
     cancelledAt: deleteField(),
     cancelledFrom: deleteField(),
   })
+}
+
+/** Fields the host fills in when adding someone manually. */
+export interface AdminAddInput {
+  name: string
+  job?: string
+  jobOther?: string
+  gender?: string
+  expectations?: string[]
+  contactMethod?: string
+  contactValue?: string
+  paid?: boolean
+  withKids?: boolean
+  hasAllergy?: boolean
+  allergyNote?: string
+}
+
+/**
+ * Host adds a guest who contacted them directly and won't self-register. There
+ * is no Firebase account, so the doc id is a synthetic `manual_*` (never a real
+ * auth uid — no signed-in user can read/own it). Added straight as approved (the
+ * host vouches). No `shares` projection is written: that public/OG card only
+ * powers the SNS "I'm attending" share, which an offline guest won't do, and
+ * writing it would need an extra admin-create rule on the public collection.
+ * Requires `allow create: if isAdmin()` on attendees (see firestore.rules).
+ */
+export async function addAttendeeByAdmin(
+  adminUid: string,
+  input: AdminAddInput,
+): Promise<AttendeeWithId> {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  const id = `manual_${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`
+  const ticketNo = generateTicketNo()
+
+  const data: Record<string, unknown> = {
+    authName: input.name, // no auth identity to mirror; reuse the display name
+    name: input.name,
+    status: 'approved' as AttendeeStatus,
+    ticketNo,
+    edition: EDITION,
+    addedByAdmin: true,
+    createdAt: serverTimestamp(),
+    approvedAt: serverTimestamp(),
+    approvedBy: adminUid,
+  }
+  if (input.job) data.job = input.job
+  if (input.jobOther) data.jobOther = input.jobOther
+  if (input.gender) data.gender = input.gender
+  if (input.expectations && input.expectations.length > 0) data.expectations = input.expectations
+  if (input.contactMethod) data.contactMethod = input.contactMethod
+  if (input.contactValue) data.contactValue = input.contactValue
+  if (input.paid) {
+    data.paid = true
+    data.paidAt = serverTimestamp()
+  }
+  if (input.withKids) data.withKids = true
+  if (input.hasAllergy) data.hasAllergy = true
+  if (input.allergyNote) data.allergyNote = input.allergyNote
+
+  await setDoc(doc(db, 'attendees', id), data)
+
+  // Local copy for the optimistic UI: serverTimestamp() resolves on the server,
+  // so stand in Timestamp.now() for immediate render/sort (reload reconciles).
+  const now = Timestamp.now()
+  return {
+    id,
+    ...(data as unknown as Attendee),
+    createdAt: now,
+    approvedAt: now,
+    ...(input.paid ? { paidAt: now } : {}),
+  }
 }
 
 /** Whether this uid is a host (presence of admins/{uid}). */

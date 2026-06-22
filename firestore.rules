@@ -93,6 +93,12 @@ service cloud.firestore {
       // Host: approve/reject and assign ticketNo.
       allow update: if isAdmin();
 
+      // Host adds a guest manually (someone who contacted them directly and
+      // won't self-register). These docs use a synthetic `manual_*` id, never a
+      // real auth uid, so no signed-in user can own one. Admins are trusted, so
+      // the field/status integrity enforced on self-create doesn't apply here.
+      allow create: if isAdmin();
+
       allow delete: if isAdmin();
     }
 

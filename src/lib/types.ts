@@ -20,6 +20,8 @@ export interface Attendee {
   status: AttendeeStatus
   ticketNo?: string // short code, e.g. "MU-2026-7Q3K"; issued at registration
   edition: string // e.g. "2026"
+  addedByAdmin?: boolean // host added this person manually (no account; they
+  // contacted the host directly and won't self-register). No shares projection.
   invitedAs?: string // the name carried by the invite link, kept for the record
   inviteToken?: string // present when the guest arrived via a valid invite link
   createdAt: Timestamp

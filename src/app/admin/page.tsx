@@ -13,6 +13,7 @@ import {
   setGender,
   cancelAttendee,
   restoreAttendee,
+  addAttendeeByAdmin,
   type AttendeeWithId,
 } from '@/lib/attendees'
 import {
@@ -34,6 +35,14 @@ const EXP_EMOJI: Record<string, string> = {
   connect: '🤝',
 }
 const EXP_ORDER = ['meat', 'drink', 'play', 'connect']
+const EXP_LABEL: Record<string, string> = {
+  meat: '肉',
+  drink: '酒',
+  play: '遊び',
+  connect: '繋がり',
+}
+// Reachable channels — mirrors the register form's CONTACT_METHODS.
+const CONTACTS = ['LINE', 'Instagram', 'Twitter', 'Discord']
 
 const wrapCls = 'mx-auto grid max-w-[560px] gap-6 px-4 pb-6 pt-[calc(1.5rem_+_env(safe-area-inset-top))]'
 const sectionCls = 'grid gap-3'
@@ -151,6 +160,26 @@ export default function AdminPage() {
   const [showCancelled, setShowCancelled] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
 
+  // Manual "add a guest" form (host enters everyone who contacted them directly).
+  const [showAdd, setShowAdd] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const blankAdd = {
+    name: '',
+    job: '',
+    jobOther: '',
+    gender: '',
+    expectations: [] as string[],
+    contactMethod: '',
+    contactValue: '',
+    paid: false,
+    withKids: false,
+    hasAllergy: false,
+    allergyNote: '',
+  }
+  const [add, setAdd] = useState(blankAdd)
+  const setAddField = <K extends keyof typeof blankAdd>(k: K, v: (typeof blankAdd)[K]) =>
+    setAdd((prev) => ({ ...prev, [k]: v }))
+
   useEffect(() => {
     if (loading || !user) return
     let active = true
@@ -247,6 +276,36 @@ export default function AdminPage() {
       console.error(err)
     } finally {
       setBusy(null)
+    }
+  }
+
+  async function handleAddAttendee(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user) return
+    const name = add.name.trim()
+    if (!name) return
+    setAdding(true)
+    try {
+      const created = await addAttendeeByAdmin(user.uid, {
+        name,
+        job: add.job || undefined,
+        jobOther: add.job === 'その他' ? add.jobOther.trim() || undefined : undefined,
+        gender: add.gender || undefined,
+        expectations: add.expectations.length ? add.expectations : undefined,
+        contactMethod: add.contactMethod || undefined,
+        contactValue: add.contactValue.trim() || undefined,
+        paid: add.paid || undefined,
+        withKids: add.withKids || undefined,
+        hasAllergy: add.hasAllergy || undefined,
+        allergyNote: add.hasAllergy ? add.allergyNote.trim() || undefined : undefined,
+      })
+      setAttendees((prev) => [created, ...prev])
+      setAdd(blankAdd)
+      setShowAdd(false)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setAdding(false)
     }
   }
 
@@ -365,6 +424,7 @@ export default function AdminPage() {
   const inviteByToken = new Map(invites.map((i) => [i.token, i]))
   const nameByUid = new Map(attendees.map((a) => [a.id, a.name]))
   function referral(a: AttendeeWithId): string {
+    if (a.addedByAdmin) return '運営が追加'
     if (!a.inviteToken) return '飛び込み'
     const inv = inviteByToken.get(a.inviteToken)
     if (!inv) return '招待リンク'
@@ -525,6 +585,155 @@ export default function AdminPage() {
               </ul>
             )}
           </div>
+        )}
+      </section>
+
+      <section className={sectionCls}>
+        <button
+          className="flex items-center gap-2 justify-self-start text-[18px] font-extrabold"
+          onClick={() => setShowAdd((v) => !v)}
+        >
+          参加者を追加 {showAdd ? '▲' : '▼'}
+        </button>
+        {showAdd && (
+          <form onSubmit={handleAddAttendee} className="grid gap-3 rounded-[8px] border border-line bg-paper p-4">
+            <p className="text-[12px] text-ink-soft">
+              直接連絡をくれた人を運営が登録します。アカウントは作られず、確定として一覧に入ります。
+            </p>
+            <input
+              className="min-h-11 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
+              value={add.name}
+              onChange={(e) => setAddField('name', e.target.value)}
+              placeholder="名前（必須）"
+              maxLength={16}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="min-h-11 flex-1 rounded-[8px] border-2 border-line bg-white px-2 py-2 text-[14px] focus:border-meat focus:outline-none"
+                value={add.job}
+                onChange={(e) => setAddField('job', e.target.value)}
+              >
+                <option value="">職業（任意）</option>
+                {JOBS.map((j) => (
+                  <option key={j.value} value={j.value}>
+                    {j.emoji} {j.value}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="min-h-11 rounded-[8px] border-2 border-line bg-white px-2 py-2 text-[14px] focus:border-meat focus:outline-none"
+                value={add.gender}
+                onChange={(e) => setAddField('gender', e.target.value)}
+              >
+                <option value="">性別（任意）</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+                <option value="その他">その他</option>
+              </select>
+            </div>
+            {add.job === 'その他' && (
+              <input
+                className="min-h-11 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
+                value={add.jobOther}
+                onChange={(e) => setAddField('jobOther', e.target.value)}
+                placeholder="職業（その他・自由入力）"
+                maxLength={16}
+              />
+            )}
+            <div className="grid gap-1">
+              <span className="text-[12px] text-ink-soft">楽しみ（任意）</span>
+              <div className="flex flex-wrap gap-2">
+                {EXP_ORDER.map((k) => {
+                  const on = add.expectations.includes(k)
+                  return (
+                    <button
+                      type="button"
+                      key={k}
+                      onClick={() =>
+                        setAddField(
+                          'expectations',
+                          on
+                            ? add.expectations.filter((x) => x !== k)
+                            : [...add.expectations, k],
+                        )
+                      }
+                      className={`min-h-10 rounded-pill border-2 px-3 text-[13px] font-semibold ${
+                        on ? 'border-meat bg-cream text-meat' : 'border-line text-ink-soft'
+                      }`}
+                    >
+                      {EXP_EMOJI[k]} {EXP_LABEL[k]}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="min-h-11 rounded-[8px] border-2 border-line bg-white px-2 py-2 text-[14px] focus:border-meat focus:outline-none"
+                value={add.contactMethod}
+                onChange={(e) => setAddField('contactMethod', e.target.value)}
+              >
+                <option value="">連絡手段（任意）</option>
+                {CONTACTS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="min-h-11 min-w-0 flex-1 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
+                value={add.contactValue}
+                onChange={(e) => setAddField('contactValue', e.target.value)}
+                placeholder="ID / ユーザー名"
+                maxLength={50}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-ink-soft">
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-meat"
+                  checked={add.paid}
+                  onChange={(e) => setAddField('paid', e.target.checked)}
+                />
+                支払い済み
+              </label>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-meat"
+                  checked={add.withKids}
+                  onChange={(e) => setAddField('withKids', e.target.checked)}
+                />
+                🧒 子連れ
+              </label>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-meat"
+                  checked={add.hasAllergy}
+                  onChange={(e) => setAddField('hasAllergy', e.target.checked)}
+                />
+                ⚠️ アレルギー
+              </label>
+            </div>
+            {add.hasAllergy && (
+              <input
+                className="min-h-11 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
+                value={add.allergyNote}
+                onChange={(e) => setAddField('allergyNote', e.target.value)}
+                placeholder="アレルギーの内容（任意）"
+                maxLength={100}
+              />
+            )}
+            <button
+              type="submit"
+              className={`btn btn--primary ${btnSm} justify-self-start`}
+              disabled={adding || !add.name.trim()}
+            >
+              {adding ? '追加中…' : '確定として追加'}
+            </button>
+          </form>
         )}
       </section>
 

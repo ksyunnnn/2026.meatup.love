@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BounceOniku } from "@/components/bounce-oniku";
 import { TweetChip } from "@/components/tweet-chip";
-import { CONTACTS } from "@/lib/contacts";
+import { CONTACTS, FEE } from "@/lib/contacts";
 import { EVENT } from "@/lib/event";
 import { InstagramIcon, TwitterIcon } from "@/components/icons";
 
@@ -332,8 +332,11 @@ export default function Home() {
           </JoinStep>
 
           <JoinStep n={3} title="参加費を払う">
+            <p className="mt-1 text-[15px] font-bold leading-snug text-ink">
+              当日 {FEE.regular.toLocaleString()}円 ／ 事前 {FEE.early.toLocaleString()}円
+            </p>
             <p className="mt-1 text-[13px] text-ink-soft">
-              事前決済うれしす！Paypay コード送るよ！当日 5,000円・事前だと 4,500円！
+              事前決済うれしす！Paypay コード送るよ〜
             </p>
           </JoinStep>
 

@@ -134,6 +134,7 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 commit `8044bc7`（編集/統合・ルール変更なし）＋後続コミット（**削除＝ルール変更あり**）。Pages デプロイ済み（`/admin/edit` 200 確認）。
 - **参加者の完全削除**：編集画面 `/admin/edit` 下部に「この参加者を削除」（赤・確認ダイアログ・キャンセル受付＝可逆 とは別の不可逆操作）。`deleteAttendee(id)` が `attendees/{id}` と `shares/{id}` を `writeBatch` で同時削除（削除した人の公開OGカードを残さない／手動レコードは shares 無しでも no-op で安全）。
   - **ルール変更（本番反映済み・rules 22/22）**：`shares` に `allow delete: if isAdmin();` を追加（公開済み＝非機微データへの admin限定 delete）。回帰テスト＝admin削除OK／所有者・他人は拒否。
+  - **削除の安全策**（後続コミット `1b0c880`/`ebc7362`・ルール変更なし）：①自己登録者（`addedByAdmin` でない）の削除は**二段確認**（別人のアカウント連携・チケットを消す旨）。手動レコードは1回確認。②削除ボタン上＋確認ダイアログに**登録経路（誰が追加したか）**を表示＝運営が手動追加／飛び込み（本人登録）／運営 or ◯◯さんの招待リンクから本人登録（`invites.ts` に `getInvite` 追加し発行者名を解決）。
 - **参加者編集画面 `/admin/edit?id=`**：一覧カード右上の ✏️ から画面遷移（`/mypage/contact` と同じ「1画面1タスク」パターン）。admin専用ガード＋Suspense＋クエリ方式（静的書き出し対応）。保存後 `/admin` へ戻る。`status`/`ticketNo` は不変、空にした任意項目は `deleteField`、`paidAt` は支払いON化時のみ更新。
 - **入力欄の共通化**：`src/components/attendee-fields.tsx`（`AttendeeFields`）を新設し、**「参加者を追加」フォームと編集画面で共有**（UIドリフト防止）。`EXPECTATIONS`/`CONTACT_METHODS` を `src/lib/profile.ts` に集約（真実の源を一本化）。
 - **本人統合（手動 → 実アカウント）**：手動レコード(`addedByAdmin`)のカードにだけ「本人と統合」。モーダルで**統合先（自己登録アカウント）を選び、項目ごとに本人/手動の値を選択** → 本人レコードへ反映＋手動レコード削除を `writeBatch` で原子的に。生存させるのは**本人側**（uid所有・`shares` あり・/mypage が動く）。`ticketNo` は本人のものを維持。

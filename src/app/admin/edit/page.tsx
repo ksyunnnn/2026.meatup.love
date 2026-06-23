@@ -98,6 +98,16 @@ function EditInner() {
       )
     )
       return
+    // Extra gate when this isn't a host-added record: the guest registered
+    // themselves, so you're deleting someone else's own account-linked record
+    // and ticket. Manual placeholders (addedByAdmin) skip this second step.
+    if (
+      !attendee.addedByAdmin &&
+      !window.confirm(
+        `「${attendee.name}」は本人が自分で登録した参加者です（運営の手動追加ではありません）。\n本人のアカウント連携・チケットも削除されます。本当に削除しますか？`,
+      )
+    )
+      return
     setDeleting(true)
     try {
       await deleteAttendee(id)

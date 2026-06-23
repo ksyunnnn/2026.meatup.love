@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Timestamp } from 'firebase/firestore'
+import { Timestamp, deleteField, serverTimestamp } from 'firebase/firestore'
 import { useAuth } from '@/lib/use-auth'
 import { Loading } from '@/components/load-state'
 import {
@@ -14,6 +14,7 @@ import {
   cancelAttendee,
   restoreAttendee,
   addAttendeeByAdmin,
+  mergeManualIntoAccount,
   type AttendeeWithId,
 } from '@/lib/attendees'
 import {
@@ -24,25 +25,19 @@ import {
   unarchiveInvite,
   type InviteWithToken,
 } from '@/lib/invites'
-import { JOBS } from '@/lib/profile'
+import { JOBS, EXPECTATIONS } from '@/lib/profile'
+import {
+  AttendeeFields,
+  blankAttendeeForm,
+  type AttendeeFormValues,
+} from '@/components/attendee-fields'
 import type { Attendee, AttendeeStatus } from '@/lib/types'
 
-// "What are you looking forward to" — keys map to the register form chips.
-const EXP_EMOJI: Record<string, string> = {
-  meat: '🍖',
-  drink: '🍺',
-  play: '🎧',
-  connect: '🤝',
-}
-const EXP_ORDER = ['meat', 'drink', 'play', 'connect']
-const EXP_LABEL: Record<string, string> = {
-  meat: '肉',
-  drink: '酒',
-  play: '遊び',
-  connect: '繋がり',
-}
-// Reachable channels — mirrors the register form's CONTACT_METHODS.
-const CONTACTS = ['LINE', 'Instagram', 'Twitter', 'Discord']
+// Roster-display lookups, derived from the single EXPECTATIONS source.
+const EXP_EMOJI: Record<string, string> = Object.fromEntries(
+  EXPECTATIONS.map((e) => [e.key, e.emoji]),
+)
+const EXP_ORDER = EXPECTATIONS.map((e) => e.key)
 
 const wrapCls = 'mx-auto grid max-w-[560px] gap-6 px-4 pb-6 pt-[calc(1.5rem_+_env(safe-area-inset-top))]'
 const sectionCls = 'grid gap-3'
@@ -59,6 +54,11 @@ const dangerBtn =
 // the everyday controls. Plain text, recedes until hovered.
 const quietDanger =
   'whitespace-nowrap text-[11px] text-ink-soft underline-offset-2 hover:text-meat-dark hover:underline disabled:no-underline'
+// Neutral counterpart to quietDanger: an occasional, non-destructive admin action.
+// A subtle outline chip — more affordance than a bare text link, but it doesn't
+// shout like a filled pill (HIG: emphasize one; filled buttons 1–2 per screen).
+const quietAction =
+  'min-h-9 whitespace-nowrap rounded-pill border border-line px-3 py-1 text-[12px] text-ink-soft hover:border-meat hover:text-meat disabled:opacity-50'
 
 function ms(ts?: Timestamp): number {
   return ts ? ts.toMillis() : 0
@@ -93,12 +93,14 @@ function AttendeeCard({
   referral,
   stamp,
   controls,
+  editHref,
   dim,
 }: {
   a: AttendeeWithId
   referral: string
   stamp: React.ReactNode
   controls?: React.ReactNode
+  editHref?: string
   dim?: boolean
 }) {
   return (
@@ -117,8 +119,18 @@ function AttendeeCard({
             </span>
           ) : null}
         </span>
-        <span className="ml-auto whitespace-nowrap text-[12px] tabular-nums text-ink-soft">
-          No. {a.ticketNo}
+        <span className="ml-auto flex items-center gap-2 whitespace-nowrap">
+          <span className="text-[12px] tabular-nums text-ink-soft">No. {a.ticketNo}</span>
+          {editHref ? (
+            <Link
+              href={editHref}
+              aria-label="編集"
+              title="編集"
+              className="-m-1 p-1 text-[15px] leading-none text-ink-soft hover:opacity-100 opacity-70"
+            >
+              ✏️
+            </Link>
+          ) : null}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-soft">
@@ -146,6 +158,249 @@ function AttendeeCard({
   )
 }
 
+// Reconcilable profile fields when merging a manual placeholder into the guest's
+// own account. Each group reads one or more Firestore keys from a chosen side
+// (null == clear). `shares: true` marks fields the public OG ticket projects —
+// an admin can't rewrite shares/{uid}, so picking the manual side there won't
+// show on the public card (surfaced as a note in the dialog).
+type MergeGroup = {
+  key: string
+  label: string
+  shares?: boolean
+  read: (a: AttendeeWithId) => Record<string, unknown>
+  show: (a: AttendeeWithId) => string
+}
+const MERGE_GROUPS: MergeGroup[] = [
+  { key: 'name', label: '名前', shares: true,
+    read: (a) => ({ name: a.name }),
+    show: (a) => a.name || '（なし）' },
+  { key: 'job', label: '職業', shares: true,
+    read: (a) => ({ job: a.job ?? null, jobOther: a.jobOther ?? null }),
+    show: (a) => (a.job ? `${a.job}${a.jobOther ? `／${a.jobOther}` : ''}` : '（なし）') },
+  { key: 'gender', label: '性別',
+    read: (a) => ({ gender: a.gender ?? null }),
+    show: (a) => a.gender || '（なし）' },
+  { key: 'expectations', label: '楽しみ', shares: true,
+    read: (a) => ({ expectations: a.expectations?.length ? a.expectations : null }),
+    show: (a) => (a.expectations?.length ? a.expectations.map((k) => EXP_EMOJI[k] ?? '').join('') : '（なし）') },
+  { key: 'contact', label: '連絡',
+    read: (a) => ({ contactMethod: a.contactMethod ?? null, contactValue: a.contactValue ?? null }),
+    show: (a) => (a.contactMethod ? `${a.contactMethod}: ${a.contactValue ?? '—'}` : '（なし）') },
+  { key: 'withKids', label: '子連れ',
+    read: (a) => ({ withKids: a.withKids ? true : null }),
+    show: (a) => (a.withKids ? '🧒 あり' : 'なし') },
+  { key: 'allergy', label: 'アレルギー',
+    read: (a) => ({ hasAllergy: a.hasAllergy ? true : null, allergyNote: a.allergyNote ?? null }),
+    show: (a) => (a.hasAllergy ? `⚠️ ${a.allergyNote ?? 'あり'}` : 'なし') },
+  { key: 'paid', label: '支払い',
+    read: (a) => ({ paid: a.paid ? true : null, paidAt: a.paid ? a.paidAt ?? null : null }),
+    show: (a) => (a.paid ? '済' : '未') },
+]
+
+function mergeHasVal(a: AttendeeWithId, g: MergeGroup): boolean {
+  return Object.values(g.read(a)).some(
+    (v) => v !== null && !(Array.isArray(v) && v.length === 0),
+  )
+}
+
+/**
+ * Merge a manual placeholder (`source`) into one self-registered account picked
+ * from `candidates`. The account survives; the placeholder is deleted. For each
+ * field the host picks the winning side — defaulting to the guest's own answer
+ * when they have one, otherwise the host's manual entry. Emits the resolved write
+ * payload (with deleteField sentinels) + a local patch for optimistic UI.
+ */
+function MergeDialog({
+  source,
+  candidates,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  source: AttendeeWithId
+  candidates: AttendeeWithId[]
+  busy: boolean
+  onConfirm: (
+    survivorUid: string,
+    writeData: Record<string, unknown>,
+    localData: Partial<Attendee>,
+  ) => void
+  onCancel: () => void
+}) {
+  const [survivorUid, setSurvivorUid] = useState(candidates[0]?.id ?? '')
+  const survivor = candidates.find((c) => c.id === survivorUid)
+  // Only the host's explicit overrides are stored — defaults are derived below.
+  // Overrides are scoped to the survivor they were made on, so switching the
+  // merge target resets them without a state-syncing effect.
+  const [overrides, setOverrides] = useState<{
+    uid: string
+    map: Record<string, 'survivor' | 'source'>
+  }>({ uid: survivorUid, map: {} })
+  const ovMap = overrides.uid === survivorUid ? overrides.map : {}
+
+  // Default: prefer the guest's own value where present, else the manual entry.
+  const defaultPick = (g: MergeGroup): 'survivor' | 'source' =>
+    survivor && mergeHasVal(survivor, g)
+      ? 'survivor'
+      : mergeHasVal(source, g)
+        ? 'source'
+        : 'survivor'
+  const pickOf = (g: MergeGroup): 'survivor' | 'source' => ovMap[g.key] ?? defaultPick(g)
+  const setPick = (key: string, side: 'survivor' | 'source') =>
+    setOverrides((prev) => ({
+      uid: survivorUid,
+      map: { ...(prev.uid === survivorUid ? prev.map : {}), [key]: side },
+    }))
+
+  function confirm() {
+    if (!survivor) return
+    const chosen: Record<string, unknown> = {}
+    for (const g of MERGE_GROUPS) {
+      const from = pickOf(g) === 'source' ? source : survivor
+      Object.assign(chosen, g.read(from))
+    }
+    const writeData: Record<string, unknown> = {}
+    const localData: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(chosen)) {
+      if (k === 'paid' || k === 'paidAt') continue
+      writeData[k] = v === null ? deleteField() : v
+      localData[k] = v === null ? undefined : v
+    }
+    if (chosen.paid === true) {
+      const ts = chosen.paidAt instanceof Timestamp ? chosen.paidAt : null
+      writeData.paid = true
+      writeData.paidAt = ts ?? serverTimestamp()
+      localData.paid = true
+      localData.paidAt = ts ?? Timestamp.now()
+    } else {
+      writeData.paid = deleteField()
+      writeData.paidAt = deleteField()
+      localData.paid = undefined
+      localData.paidAt = undefined
+    }
+    if (
+      !window.confirm(
+        `「${source.name}」を ${survivor.name} さんのアカウントに統合し、手動レコードを削除します。よろしいですか？`,
+      )
+    )
+      return
+    onConfirm(survivor.id, writeData, localData as Partial<Attendee>)
+  }
+
+  const sharesOverridden = MERGE_GROUPS.some(
+    (g) => g.shares && pickOf(g) === 'source' && survivor && g.show(survivor) !== g.show(source),
+  )
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="grid max-h-[85vh] w-full max-w-[460px] gap-3 overflow-auto rounded-[12px] border border-line bg-white p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-[17px] font-extrabold">本人アカウントへ統合</h2>
+        <p className="text-[12px] text-ink-soft">
+          手動レコード「{source.name}」を、本人が自分でログイン・登録したアカウントに統合します。
+          各項目で残す値を選べます。
+        </p>
+
+        {candidates.length === 0 ? (
+          <p className="rounded-[8px] border border-line bg-paper px-3 py-2 text-[13px] text-ink-soft">
+            統合先がありません。本人がまだログイン／登録していない可能性があります。
+          </p>
+        ) : (
+          <>
+            <label className="grid gap-1 text-[12px] text-ink-soft">
+              統合先（本人がログイン済みのアカウント）
+              <select
+                className="min-h-11 rounded-[8px] border-2 border-line bg-white px-2 py-2 text-[14px] focus:border-meat focus:outline-none"
+                value={survivorUid}
+                onChange={(e) => setSurvivorUid(e.target.value)}
+              >
+                {candidates.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}（No.{c.ticketNo}・{c.status === 'approved' ? '確定' : '未確定'}）
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {survivor && (
+              <>
+                <div className="grid gap-2 rounded-[8px] border border-line bg-paper p-3">
+                  {MERGE_GROUPS.map((g) => (
+                    <div
+                      key={g.key}
+                      className="grid grid-cols-[52px_1fr_1fr] items-stretch gap-2 text-[12px]"
+                    >
+                      <span className="self-center font-semibold">{g.label}</span>
+                      {(['survivor', 'source'] as const).map((side) => {
+                        const a = side === 'survivor' ? survivor : source
+                        const active = pickOf(g) === side
+                        return (
+                          <button
+                            key={side}
+                            type="button"
+                            onClick={() => setPick(g.key, side)}
+                            className={`rounded-[6px] border px-2 py-1 text-left ${
+                              active
+                                ? 'border-meat bg-cream text-meat'
+                                : 'border-line text-ink-soft'
+                            }`}
+                          >
+                            <span className="block text-[10px] opacity-70">
+                              {side === 'survivor' ? '本人' : '手動'}
+                            </span>
+                            {g.show(a)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-[11px] text-ink-soft">
+                  番号は本人のもの（No.{survivor.ticketNo}）を維持します。
+                </p>
+                {sharesOverridden && (
+                  <p className="text-[11px] text-meat-dark">
+                    ⚠️ 名前・職業・楽しみで「手動」を選んでも、公開チケット(OG)は本人の登録値を表示します。
+                  </p>
+                )}
+                {survivor.status === 'pending' && (
+                  <p className="text-[11px] text-ink-soft">
+                    ※ 統合後も本人の状態は「未確定」のままです。必要なら確認してください。
+                  </p>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button
+            type="button"
+            className="min-h-10 px-4 py-2 text-[13px] text-ink-soft underline-offset-2 hover:text-meat hover:underline"
+            onClick={onCancel}
+          >
+            キャンセル
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary min-h-10 px-4 py-2"
+            disabled={!survivor || busy}
+            onClick={confirm}
+          >
+            {busy ? '統合中…' : '統合する'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const { user, loading } = useAuth()
   const [admin, setAdmin] = useState(false)
@@ -159,26 +414,14 @@ export default function AdminPage() {
   const [copied, setCopied] = useState<string | null>(null)
   const [showCancelled, setShowCancelled] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  // Manual placeholder currently being merged into a real account (its id), or null.
+  const [mergeFor, setMergeFor] = useState<string | null>(null)
 
   // Manual "add a guest" form (host enters everyone who contacted them directly).
+  // Shares its field set with the /admin/edit screen via <AttendeeFields>.
   const [showAdd, setShowAdd] = useState(false)
   const [adding, setAdding] = useState(false)
-  const blankAdd = {
-    name: '',
-    job: '',
-    jobOther: '',
-    gender: '',
-    expectations: [] as string[],
-    contactMethod: '',
-    contactValue: '',
-    paid: false,
-    withKids: false,
-    hasAllergy: false,
-    allergyNote: '',
-  }
-  const [add, setAdd] = useState(blankAdd)
-  const setAddField = <K extends keyof typeof blankAdd>(k: K, v: (typeof blankAdd)[K]) =>
-    setAdd((prev) => ({ ...prev, [k]: v }))
+  const [add, setAdd] = useState<AttendeeFormValues>(blankAttendeeForm)
 
   useEffect(() => {
     if (loading || !user) return
@@ -300,12 +543,34 @@ export default function AdminPage() {
         allergyNote: add.hasAllergy ? add.allergyNote.trim() || undefined : undefined,
       })
       setAttendees((prev) => [created, ...prev])
-      setAdd(blankAdd)
+      setAdd(blankAttendeeForm)
       setShowAdd(false)
     } catch (err) {
       console.error(err)
     } finally {
       setAdding(false)
+    }
+  }
+
+  async function handleMerge(
+    survivorUid: string,
+    writeData: Record<string, unknown>,
+    localData: Partial<Attendee>,
+    sourceId: string,
+  ) {
+    setBusy(sourceId)
+    try {
+      await mergeManualIntoAccount(survivorUid, sourceId, writeData)
+      setAttendees((prev) =>
+        prev
+          .filter((p) => p.id !== sourceId)
+          .map((p) => (p.id === survivorUid ? { ...p, ...localData } : p)),
+      )
+      setMergeFor(null)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBusy(null)
     }
   }
 
@@ -600,132 +865,7 @@ export default function AdminPage() {
             <p className="text-[12px] text-ink-soft">
               直接連絡をくれた人を運営が登録します。アカウントは作られず、確定として一覧に入ります。
             </p>
-            <input
-              className="min-h-11 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
-              value={add.name}
-              onChange={(e) => setAddField('name', e.target.value)}
-              placeholder="名前（必須）"
-              maxLength={16}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                className="min-h-11 flex-1 rounded-[8px] border-2 border-line bg-white px-2 py-2 text-[14px] focus:border-meat focus:outline-none"
-                value={add.job}
-                onChange={(e) => setAddField('job', e.target.value)}
-              >
-                <option value="">職業（任意）</option>
-                {JOBS.map((j) => (
-                  <option key={j.value} value={j.value}>
-                    {j.emoji} {j.value}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="min-h-11 rounded-[8px] border-2 border-line bg-white px-2 py-2 text-[14px] focus:border-meat focus:outline-none"
-                value={add.gender}
-                onChange={(e) => setAddField('gender', e.target.value)}
-              >
-                <option value="">性別（任意）</option>
-                <option value="男">男</option>
-                <option value="女">女</option>
-                <option value="その他">その他</option>
-              </select>
-            </div>
-            {add.job === 'その他' && (
-              <input
-                className="min-h-11 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
-                value={add.jobOther}
-                onChange={(e) => setAddField('jobOther', e.target.value)}
-                placeholder="職業（その他・自由入力）"
-                maxLength={16}
-              />
-            )}
-            <div className="grid gap-1">
-              <span className="text-[12px] text-ink-soft">楽しみ（任意）</span>
-              <div className="flex flex-wrap gap-2">
-                {EXP_ORDER.map((k) => {
-                  const on = add.expectations.includes(k)
-                  return (
-                    <button
-                      type="button"
-                      key={k}
-                      onClick={() =>
-                        setAddField(
-                          'expectations',
-                          on
-                            ? add.expectations.filter((x) => x !== k)
-                            : [...add.expectations, k],
-                        )
-                      }
-                      className={`min-h-10 rounded-pill border-2 px-3 text-[13px] font-semibold ${
-                        on ? 'border-meat bg-cream text-meat' : 'border-line text-ink-soft'
-                      }`}
-                    >
-                      {EXP_EMOJI[k]} {EXP_LABEL[k]}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                className="min-h-11 rounded-[8px] border-2 border-line bg-white px-2 py-2 text-[14px] focus:border-meat focus:outline-none"
-                value={add.contactMethod}
-                onChange={(e) => setAddField('contactMethod', e.target.value)}
-              >
-                <option value="">連絡手段（任意）</option>
-                {CONTACTS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="min-h-11 min-w-0 flex-1 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
-                value={add.contactValue}
-                onChange={(e) => setAddField('contactValue', e.target.value)}
-                placeholder="ID / ユーザー名"
-                maxLength={50}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-ink-soft">
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-meat"
-                  checked={add.paid}
-                  onChange={(e) => setAddField('paid', e.target.checked)}
-                />
-                支払い済み
-              </label>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-meat"
-                  checked={add.withKids}
-                  onChange={(e) => setAddField('withKids', e.target.checked)}
-                />
-                🧒 子連れ
-              </label>
-              <label className="flex items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-meat"
-                  checked={add.hasAllergy}
-                  onChange={(e) => setAddField('hasAllergy', e.target.checked)}
-                />
-                ⚠️ アレルギー
-              </label>
-            </div>
-            {add.hasAllergy && (
-              <input
-                className="min-h-11 rounded-[8px] border-2 border-line px-3 py-2 focus:border-meat focus:outline-none"
-                value={add.allergyNote}
-                onChange={(e) => setAddField('allergyNote', e.target.value)}
-                placeholder="アレルギーの内容（任意）"
-                maxLength={100}
-              />
-            )}
+            <AttendeeFields values={add} onChange={setAdd} />
             <button
               type="submit"
               className={`btn btn--primary ${btnSm} justify-self-start`}
@@ -761,6 +901,7 @@ export default function AdminPage() {
                 key={a.id}
                 a={a}
                 referral={referral(a)}
+                editHref={`/admin/edit?id=${a.id}`}
                 stamp={
                   a.status === 'approved' ? (
                     <span className="inline-flex items-center gap-1">
@@ -785,6 +926,15 @@ export default function AdminPage() {
                       />
                       支払い済み
                     </label>
+                    {a.addedByAdmin && (
+                      <button
+                        className={quietAction}
+                        onClick={() => setMergeFor(a.id)}
+                        disabled={busy === a.id}
+                      >
+                        本人と統合
+                      </button>
+                    )}
                     <button
                       className={quietDanger}
                       onClick={() => handleCancel(a)}
@@ -832,6 +982,26 @@ export default function AdminPage() {
           )}
         </section>
       )}
+
+      {mergeFor &&
+        (() => {
+          const source = attendees.find((a) => a.id === mergeFor)
+          if (!source) return null
+          // Survivors = self-registered accounts (own a uid + shares); a manual
+          // placeholder can never be a merge target.
+          const candidates = activeAll.filter((a) => !a.addedByAdmin && a.id !== mergeFor)
+          return (
+            <MergeDialog
+              source={source}
+              candidates={candidates}
+              busy={busy === mergeFor}
+              onCancel={() => setMergeFor(null)}
+              onConfirm={(uid, writeData, localData) =>
+                handleMerge(uid, writeData, localData, source.id)
+              }
+            />
+          )
+        })()}
     </main>
   )
 }

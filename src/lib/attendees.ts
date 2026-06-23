@@ -5,6 +5,7 @@ import {
   setDoc,
   updateDoc,
   runTransaction,
+  writeBatch,
   collection,
   query,
   where,
@@ -121,6 +122,49 @@ export async function createAttendee(
 export async function getMyAttendee(uid: string): Promise<Attendee | null> {
   const snap = await getDoc(doc(db, 'attendees', uid))
   return snap.exists() ? (snap.data() as Attendee) : null
+}
+
+/** Fetch any attendee by id (admin-only read for ids other than your own —
+ *  see firestore.rules). Used by the /admin edit screen. */
+export async function getAttendee(id: string): Promise<Attendee | null> {
+  const snap = await getDoc(doc(db, 'attendees', id))
+  return snap.exists() ? (snap.data() as Attendee) : null
+}
+
+/**
+ * Host edits an existing attendee's profile from /admin (any field — admin is
+ * trusted, see rules). Emptied optional fields are cleared with deleteField() so
+ * toggling something off actually removes it. status/ticketNo are NOT touched
+ * (approve/cancel own status; the number is pinned for shares consistency).
+ * paidAt is set only when `touchPaidAt` is true (i.e. payment was just turned
+ * on) so re-saving an already-paid guest doesn't overwrite the original time.
+ */
+export async function updateAttendeeProfile(
+  id: string,
+  input: AdminAddInput,
+  opts?: { touchPaidAt?: boolean },
+): Promise<void> {
+  const data: Record<string, unknown> = {
+    name: input.name,
+    job: input.job ?? deleteField(),
+    jobOther: input.jobOther ?? deleteField(),
+    gender: input.gender ?? deleteField(),
+    expectations:
+      input.expectations && input.expectations.length > 0 ? input.expectations : deleteField(),
+    contactMethod: input.contactMethod ?? deleteField(),
+    contactValue: input.contactValue ?? deleteField(),
+    withKids: input.withKids ? true : deleteField(),
+    hasAllergy: input.hasAllergy ? true : deleteField(),
+    allergyNote: input.hasAllergy && input.allergyNote ? input.allergyNote : deleteField(),
+  }
+  if (input.paid) {
+    data.paid = true
+    if (opts?.touchPaidAt) data.paidAt = serverTimestamp()
+  } else {
+    data.paid = deleteField()
+    data.paidAt = deleteField()
+  }
+  await updateDoc(doc(db, 'attendees', id), data)
 }
 
 /** Attendee plus its document id (== auth uid). */
@@ -261,6 +305,32 @@ export async function addAttendeeByAdmin(
     approvedAt: now,
     ...(input.paid ? { paidAt: now } : {}),
   }
+}
+
+/**
+ * Merge a manual placeholder (`addedByAdmin`, id `manual_*`) into the guest's own
+ * account record (doc id == their auth uid). The ACCOUNT record SURVIVES — it is
+ * what the guest owns and what backs `shares/{uid}` and /mypage — and the
+ * placeholder is deleted, atomically (one batch). `fields` is the admin-resolved
+ * profile set to write onto the survivor; use `deleteField()` to clear one.
+ *
+ * `ticketNo`/`status` are intentionally NOT merged: the public `shares/{uid}` is
+ * owner-written (an admin can't touch it), and its `ticketNo` must keep matching
+ * the attendee record — so the number stays the survivor's. Both writes are
+ * admin-permitted (see firestore.rules: attendees update + delete if isAdmin()),
+ * so this needs no rules or schema change.
+ */
+export async function mergeManualIntoAccount(
+  survivorUid: string,
+  placeholderId: string,
+  fields: Record<string, unknown>,
+): Promise<void> {
+  const batch = writeBatch(db)
+  if (Object.keys(fields).length > 0) {
+    batch.update(doc(db, 'attendees', survivorUid), fields)
+  }
+  batch.delete(doc(db, 'attendees', placeholderId))
+  await batch.commit()
 }
 
 /** Whether this uid is a host (presence of admins/{uid}). */

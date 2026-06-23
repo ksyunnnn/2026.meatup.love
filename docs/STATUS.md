@@ -1,4 +1,4 @@
-# 現状と引き継ぎ（2026-06-22 更新）
+# 現状と引き継ぎ（2026-06-23 更新）
 
 ブランチ: `main` ＝ `origin`（push 済み）。本番(Pages/Firebase)は最新ビルド反映済み。
 デプロイは手動 `wrangler`（git 未連携）。今後も `main` で作業。
@@ -72,6 +72,10 @@
   「楽しみ」集計＋その他職業の自由入力表示。**確認待ち・参加者一覧は共通カード（情報量同一・下半のみ段階で出し分け）で
   新しい順**。日時（確認待ち=登録日時／一覧=確定日時）。**キャンセル受付**（別セクション・集計除外・参加に戻す）。
   **招待リンク管理**（未使用=取り消す＝削除で失効／使用済み=アーカイブ）。**手動登録**（後述）。
+  **参加者編集**＝カード右上 ✏️ → **画面遷移 `/admin/edit?id=`**（admin専用・Suspense＋クエリ方式）。入力欄は追加フォームと
+  共通の `AttendeeFields`（`EXPECTATIONS`/`CONTACT_METHODS` は `profile.ts` に集約）。`status`/`ticketNo` は触らず
+  （承認/キャンセルが status を、`shares` 整合のため番号を固定）、空にした任意項目は `deleteField` で消去、`paidAt` は支払いON化時のみ更新。
+  **本人統合**（後述）。
 
 ## 再デプロイ手順（手動 / git 未連携）
 ```
@@ -126,6 +130,16 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - **www.meatup.love → apex 301**：www を `meatup-2026` Pages のカスタムドメインに追加＋ `functions/_middleware.js` でホスト判定301（パス/クエリ保持）。**稼働確認済**。CNAME（`www`→`meatup-2026.pages.dev`・Proxied）は wrangler OAuth に DNS 編集権限が無くダッシュボードで作成。
 - **AIクローラー方針＝現状維持で確定**：Cloudflare「AIボットをブロック」は **ON のまま**。これがブロックするのは**学習用クローラー（GPTBot/ClaudeBot/CCBot/Google-Extended 等）だけ**で、**回答での紹介に効くクローラー（OAI-SearchBot/ChatGPT-User/Claude-User/Claude-SearchBot/PerplexityBot）は許可**＝ChatGPT・Claude・Perplexity の回答で紹介される状態は成立。学習はブロックのまま、が方針。※Geminiに出したくなった時だけ Google-Extended 解放（＝AIブロックOFF）が必要。robots.ts の「全許可」コメントは実態（学習のみブロック）と差があるが**意図的**＝触らない。
 
+## 2026-06-23（参加者の編集画面＋手動レコードの本人統合・本番反映済み）
+commit `8044bc7`（**ルール/スキーマ変更なし**・既存の admin `update`/`delete` 許可をそのまま利用）。Pages デプロイ済み（`/admin/edit` 200 確認）。
+- **参加者編集画面 `/admin/edit?id=`**：一覧カード右上の ✏️ から画面遷移（`/mypage/contact` と同じ「1画面1タスク」パターン）。admin専用ガード＋Suspense＋クエリ方式（静的書き出し対応）。保存後 `/admin` へ戻る。`status`/`ticketNo` は不変、空にした任意項目は `deleteField`、`paidAt` は支払いON化時のみ更新。
+- **入力欄の共通化**：`src/components/attendee-fields.tsx`（`AttendeeFields`）を新設し、**「参加者を追加」フォームと編集画面で共有**（UIドリフト防止）。`EXPECTATIONS`/`CONTACT_METHODS` を `src/lib/profile.ts` に集約（真実の源を一本化）。
+- **本人統合（手動 → 実アカウント）**：手動レコード(`addedByAdmin`)のカードにだけ「本人と統合」。モーダルで**統合先（自己登録アカウント）を選び、項目ごとに本人/手動の値を選択** → 本人レコードへ反映＋手動レコード削除を `writeBatch` で原子的に。生存させるのは**本人側**（uid所有・`shares` あり・/mypage が動く）。`ticketNo` は本人のものを維持。
+  - 障害は「マッチング」ではなく**本人の初回ログイン**だけ（uid は本人サインインで初めて生成＝Auth仕様）。メールだけからアカウントは作れない。
+  - ⚠ **公開チケット(OG)整合**：admin は他人の `shares/{uid}` を書けないため、名前/職業/楽しみを手動側に上書きしても公開カードには反映されない（編集画面・統合ダイアログで注記）。手動レコードは元々 `shares` 無しなので無関係。
+- lib 追加：`getAttendee` / `updateAttendeeProfile(id, input, {touchPaidAt})` / `mergeManualIntoAccount(survivorUid, placeholderId, fields)`（いずれも `attendees.ts`）。
+- 未着手：**claim URL による自動紐付け**（手動登録→専用URL→ログインで自動統合）。最小案＝admin invite 流用＋invite に `claimFor` 1フィールド（番号再採番・gender/paid は非転記の割り切り）。完全引き継ぎは特権サーバが必要。
+
 ## 2026-06-22（管理画面の改善・2コミット本番反映済み）
 管理画面を一通り改善。commit `dbfd7f1`（UI系・ルール変更なし）と `2aa2139`（手動登録・**ルール変更あり**）の2本。
 - **並べ替え＝新しい順**（確認待ち・参加者一覧とも `createdAt` 降順）。日時表示：確認待ち=登録日時、参加者一覧=確定日時（`approvedAt`／pendingは「未確定」）。
@@ -133,7 +147,7 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - **支払いUI**：状態がラベルになって誤解を招く `未払い/✓払った` トグルを廃止 → **固定ラベル「支払い済み」のチェックボックス**。
 - **キャンセル受付**：新ステータス `cancelled` を追加（`AttendeeStatus` に追加・`STATUS_LABEL` 廃止）。`cancelledAt`/`cancelledFrom` を保持。一覧では**控えめなテキストリンク＋確認ダイアログ**で記録、**別セクション「キャンセル(n)」折りたたみに集約・集計（人数/支払い/楽しみ/性別）から除外**、「参加に戻す」で `cancelledFrom` へ復帰。
 - **招待リンク管理**：未使用は「取り消す」＝`deleteDoc`（**削除が失効も兼ねる**＝`validInvite` の `exists()` で弾かれる・確認付き）。使用済みは `archivedAt` を付けて一覧から隠す（**doc保全で紹介元表示を維持**）＋「アーカイブ済み」折りたたみ＋「戻す」。型 `Invite.archivedAt?`。
-- **手動登録（直接連絡をくれた人を運営が登録）**：`addAttendeeByAdmin()` が**合成ID `manual_<32hex>`**（Auth uid と衝突しない）で `status:'approved'`＋`createdAt/approvedAt/approvedBy`＋`ticketNo` を付与。**`shares` は作らない**（オフライン前提・公開OGの用途なし、公開面とルール緩和を回避）。型 `Attendee.addedByAdmin?`。一覧の紹介元は「運営が追加」。アカウントは無し（/mypage・対話チケットは持たない）。後でログイン紐付けは**未実装**（必要時は別タスク＝合成ID→実uidへのマージ）。
+- **手動登録（直接連絡をくれた人を運営が登録）**：`addAttendeeByAdmin()` が**合成ID `manual_<32hex>`**（Auth uid と衝突しない）で `status:'approved'`＋`createdAt/approvedAt/approvedBy`＋`ticketNo` を付与。**`shares` は作らない**（オフライン前提・公開OGの用途なし、公開面とルール緩和を回避）。型 `Attendee.addedByAdmin?`。一覧の紹介元は「運営が追加」。アカウントは無し（/mypage・対話チケットは持たない）。後でログイン紐付け＝**2026-06-23 に「本人統合」で実装**（後述）。
   - **ルール変更（本番反映済み・テスト 21/21）**：`attendees` に `allow create: if isAdmin();` を追加（運営が名簿エントリを作成可）。`shares` は無変更。回帰テスト＝admin作成OK／非adminの他人ID作成は拒否。
 - ⚠ **「支払いUI」より上のメール表示案は撤回済み**（owner判断）：admin に email を出す案を一度実装→全撤回。`Attendee` に email フィールドは持たない（`authName` は登録時 `user.email ?? displayName ?? uid`＝実データ上は全員メール、だが admin では非表示が確定）。
 - ⚠ **共有リンクの設計（再確認メモ）**：`/t/{uid}` はクローラー向けOGメタ専用で**人間は全員 `/ticket/`（固定）へリダイレクト**。`/ticket` は常にログイン中の自分の券（URLのuidは見ない）。他人の対話チケットは出ない＝公開面は `shares` の非機微カード画像のみ。これは**ルール上の制約ではなくIAの選択**（`shares` は `read: if true` なので、やろうと思えばルール変更なしで公開券ページ化も可能）。根拠＝NFR8（他人情報は管理者のみ）＋shares/attendees の二層分離。

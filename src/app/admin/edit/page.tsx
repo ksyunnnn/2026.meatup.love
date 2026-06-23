@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { Loading } from '@/components/load-state'
 import { isAdmin, getAttendee, updateAttendeeProfile, deleteAttendee } from '@/lib/attendees'
+import { getInvite } from '@/lib/invites'
 import {
   AttendeeFields,
   attendeeToForm,
@@ -31,6 +32,44 @@ function EditInner() {
   const [form, setForm] = useState<AttendeeFormValues>(blankAttendeeForm)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // "Who added this guest" — resolved from the record's provenance, so deletion
+  // (esp. of someone you didn't add) is an informed choice.
+  const [provenance, setProvenance] = useState('')
+
+  // Resolve the referral source once the attendee is loaded. Invite-issued
+  // records need an extra read to name the issuer (host vs a confirmed guest).
+  useEffect(() => {
+    if (!attendee) return
+    let active = true
+    ;(async () => {
+      if (attendee.addedByAdmin) {
+        setProvenance('運営が手動で追加')
+        return
+      }
+      if (!attendee.inviteToken) {
+        setProvenance('飛び込み（本人が自分で登録）')
+        return
+      }
+      setProvenance('招待リンクから本人が登録')
+      try {
+        const inv = await getInvite(attendee.inviteToken)
+        if (!active || !inv) return
+        if (await isAdmin(inv.issuedBy)) {
+          if (active) setProvenance('運営の招待リンクから本人が登録')
+          return
+        }
+        const issuer = await getAttendee(inv.issuedBy)
+        if (active && issuer?.name) {
+          setProvenance(`${issuer.name} さんの招待リンクから本人が登録`)
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [attendee])
 
   useEffect(() => {
     if (loading || !user) return
@@ -91,10 +130,11 @@ function EditInner() {
 
   async function handleDelete() {
     if (!attendee) return
-    // Permanent — unlike キャンセル受付 (reversible). Confirm names the guest.
+    // Permanent — unlike キャンセル受付 (reversible). Confirm names the guest and
+    // their provenance (who added them), so deletion is an informed choice.
     if (
       !window.confirm(
-        `${attendee.name} さんを完全に削除します（取り消せません）。よろしいですか？\n\n※ 出欠を一時的に外すだけなら、一覧の「キャンセル受付」を使ってください。`,
+        `${attendee.name} さんを完全に削除します（取り消せません）。\n登録経路：${provenance || '不明'}\n\nよろしいですか？\n\n※ 出欠を一時的に外すだけなら、一覧の「キャンセル受付」を使ってください。`,
       )
     )
       return
@@ -187,6 +227,9 @@ function EditInner() {
       {/* Destructive, kept apart from the form and quiet (HIG: red + confirm, not
           the hero). For a reversible "外すだけ" use キャンセル受付 on the roster. */}
       <div className="mt-4 grid gap-1 border-t border-line pt-4">
+        <p className="text-[12px] text-ink-soft">
+          登録経路：<span className="font-semibold text-ink">{provenance || '…'}</span>
+        </p>
         <button
           type="button"
           onClick={handleDelete}

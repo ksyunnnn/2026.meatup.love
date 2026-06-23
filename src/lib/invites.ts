@@ -1,5 +1,6 @@
 import {
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -56,6 +57,13 @@ export async function listInvites(): Promise<InviteWithToken[]> {
   const q = query(collection(db, 'invites'), where('edition', '==', EDITION))
   const snap = await getDocs(q)
   return snap.docs.map((d) => ({ token: d.id, ...(d.data() as Invite) }))
+}
+
+/** Fetch a single invite by token (any signed-in user may read — see rules).
+ *  Used by the /admin edit screen to resolve a guest's referral source. */
+export async function getInvite(token: string): Promise<Invite | null> {
+  const snap = await getDoc(doc(db, 'invites', token))
+  return snap.exists() ? (snap.data() as Invite) : null
 }
 
 /** Revoke an unused invite by deleting it. Deletion is the revoke: validInvite()

@@ -12,6 +12,7 @@ import {
   collection,
   setDoc,
   updateDoc,
+  deleteDoc,
   writeBatch,
   runTransaction,
   serverTimestamp,
@@ -323,6 +324,21 @@ describe('shares (public OG projection)', () => {
         gender: '男',
       }),
     )
+  })
+
+  it('a host may delete a share (cleanup on attendee delete); owner/others cannot', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin1'), {})
+      await setDoc(doc(ctx.firestore(), 'shares/u1'), {
+        name: 'A',
+        ticketNo: 'X',
+        edition: '2026',
+      })
+    })
+    const owner = testEnv.authenticatedContext('u1').firestore()
+    await assertFails(deleteDoc(doc(owner, 'shares/u1')))
+    const admin = testEnv.authenticatedContext('admin1').firestore()
+    await assertSucceeds(deleteDoc(doc(admin, 'shares/u1')))
   })
 })
 

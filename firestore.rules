@@ -148,6 +148,10 @@ service cloud.firestore {
         && request.auth.uid == uid
         && sharesFieldsOk()
         && request.resource.data.ticketNo == resource.data.ticketNo;
+      // Host deletes a guest from /admin: the attendee doc and this public
+      // projection are removed together, so the deleted guest's OG card stops
+      // resolving. Owner can't delete their own (no self-delete path needed).
+      allow delete: if isAdmin();
     }
 
     match /admins/{uid} {

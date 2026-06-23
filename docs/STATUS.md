@@ -130,8 +130,10 @@ npx wrangler pages deploy out --project-name meatup-2026 --branch main --commit-
 - **www.meatup.love → apex 301**：www を `meatup-2026` Pages のカスタムドメインに追加＋ `functions/_middleware.js` でホスト判定301（パス/クエリ保持）。**稼働確認済**。CNAME（`www`→`meatup-2026.pages.dev`・Proxied）は wrangler OAuth に DNS 編集権限が無くダッシュボードで作成。
 - **AIクローラー方針＝現状維持で確定**：Cloudflare「AIボットをブロック」は **ON のまま**。これがブロックするのは**学習用クローラー（GPTBot/ClaudeBot/CCBot/Google-Extended 等）だけ**で、**回答での紹介に効くクローラー（OAI-SearchBot/ChatGPT-User/Claude-User/Claude-SearchBot/PerplexityBot）は許可**＝ChatGPT・Claude・Perplexity の回答で紹介される状態は成立。学習はブロックのまま、が方針。※Geminiに出したくなった時だけ Google-Extended 解放（＝AIブロックOFF）が必要。robots.ts の「全許可」コメントは実態（学習のみブロック）と差があるが**意図的**＝触らない。
 
-## 2026-06-23（参加者の編集画面＋手動レコードの本人統合・本番反映済み）
-commit `8044bc7`（**ルール/スキーマ変更なし**・既存の admin `update`/`delete` 許可をそのまま利用）。Pages デプロイ済み（`/admin/edit` 200 確認）。
+## 2026-06-23（参加者の編集画面＋本人統合＋削除・本番反映済み）
+commit `8044bc7`（編集/統合・ルール変更なし）＋後続コミット（**削除＝ルール変更あり**）。Pages デプロイ済み（`/admin/edit` 200 確認）。
+- **参加者の完全削除**：編集画面 `/admin/edit` 下部に「この参加者を削除」（赤・確認ダイアログ・キャンセル受付＝可逆 とは別の不可逆操作）。`deleteAttendee(id)` が `attendees/{id}` と `shares/{id}` を `writeBatch` で同時削除（削除した人の公開OGカードを残さない／手動レコードは shares 無しでも no-op で安全）。
+  - **ルール変更（本番反映済み・rules 22/22）**：`shares` に `allow delete: if isAdmin();` を追加（公開済み＝非機微データへの admin限定 delete）。回帰テスト＝admin削除OK／所有者・他人は拒否。
 - **参加者編集画面 `/admin/edit?id=`**：一覧カード右上の ✏️ から画面遷移（`/mypage/contact` と同じ「1画面1タスク」パターン）。admin専用ガード＋Suspense＋クエリ方式（静的書き出し対応）。保存後 `/admin` へ戻る。`status`/`ticketNo` は不変、空にした任意項目は `deleteField`、`paidAt` は支払いON化時のみ更新。
 - **入力欄の共通化**：`src/components/attendee-fields.tsx`（`AttendeeFields`）を新設し、**「参加者を追加」フォームと編集画面で共有**（UIドリフト防止）。`EXPECTATIONS`/`CONTACT_METHODS` を `src/lib/profile.ts` に集約（真実の源を一本化）。
 - **本人統合（手動 → 実アカウント）**：手動レコード(`addedByAdmin`)のカードにだけ「本人と統合」。モーダルで**統合先（自己登録アカウント）を選び、項目ごとに本人/手動の値を選択** → 本人レコードへ反映＋手動レコード削除を `writeBatch` で原子的に。生存させるのは**本人側**（uid所有・`shares` あり・/mypage が動く）。`ticketNo` は本人のものを維持。

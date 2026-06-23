@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/use-auth'
 import { Loading } from '@/components/load-state'
-import { isAdmin, getAttendee, updateAttendeeProfile } from '@/lib/attendees'
+import { isAdmin, getAttendee, updateAttendeeProfile, deleteAttendee } from '@/lib/attendees'
 import {
   AttendeeFields,
   attendeeToForm,
@@ -30,6 +30,7 @@ function EditInner() {
   const [attendee, setAttendee] = useState<Attendee | null>(null)
   const [form, setForm] = useState<AttendeeFormValues>(blankAttendeeForm)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (loading || !user) return
@@ -85,6 +86,25 @@ function EditInner() {
     } catch (err) {
       console.error(err)
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!attendee) return
+    // Permanent — unlike キャンセル受付 (reversible). Confirm names the guest.
+    if (
+      !window.confirm(
+        `${attendee.name} さんを完全に削除します（取り消せません）。よろしいですか？\n\n※ 出欠を一時的に外すだけなら、一覧の「キャンセル受付」を使ってください。`,
+      )
+    )
+      return
+    setDeleting(true)
+    try {
+      await deleteAttendee(id)
+      router.push('/admin')
+    } catch (err) {
+      console.error(err)
+      setDeleting(false)
     }
   }
 
@@ -153,6 +173,22 @@ function EditInner() {
           ※ 名前・職業・楽しみの変更は公開チケット(OG)には反映されません（本人のみ更新可）。
         </p>
       )}
+
+      {/* Destructive, kept apart from the form and quiet (HIG: red + confirm, not
+          the hero). For a reversible "外すだけ" use キャンセル受付 on the roster. */}
+      <div className="mt-4 grid gap-1 border-t border-line pt-4">
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting || saving}
+          className="justify-self-start text-[12px] text-meat-dark underline-offset-2 hover:underline disabled:opacity-50"
+        >
+          {deleting ? '削除中…' : 'この参加者を削除'}
+        </button>
+        <p className="text-[11px] text-ink-soft">
+          完全に削除します（取り消せません）。一時的に外すだけなら一覧の「キャンセル受付」を。
+        </p>
+      </div>
     </main>
   )
 }

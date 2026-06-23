@@ -333,6 +333,20 @@ export async function mergeManualIntoAccount(
   await batch.commit()
 }
 
+/**
+ * Host permanently deletes a guest from /admin (distinct from キャンセル受付,
+ * which is the reversible soft-delete). Removes the attendee doc AND its public
+ * `shares/{id}` projection together so the deleted guest's OG card stops
+ * resolving. A manual placeholder has no shares doc — deleting a missing doc in a
+ * batch is a harmless no-op. Both deletes require isAdmin() (see firestore.rules).
+ */
+export async function deleteAttendee(id: string): Promise<void> {
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'attendees', id))
+  batch.delete(doc(db, 'shares', id))
+  await batch.commit()
+}
+
 /** Whether this uid is a host (presence of admins/{uid}). */
 export async function isAdmin(uid: string): Promise<boolean> {
   const snap = await getDoc(doc(db, 'admins', uid))

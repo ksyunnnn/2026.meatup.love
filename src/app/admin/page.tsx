@@ -26,6 +26,7 @@ import {
   type InviteWithToken,
 } from '@/lib/invites'
 import { JOBS, EXPECTATIONS } from '@/lib/profile'
+import { writeStats } from '@/lib/stats'
 import {
   AttendeeFields,
   blankAttendeeForm,
@@ -406,6 +407,8 @@ export default function AdminPage() {
   const [admin, setAdmin] = useState(false)
   const [checked, setChecked] = useState(false)
   const [attendees, setAttendees] = useState<AttendeeWithId[]>([])
+  const [statsBusy, setStatsBusy] = useState(false)
+  const [statsMsg, setStatsMsg] = useState('')
   const [invites, setInvites] = useState<InviteWithToken[]>([])
   const [inviteName, setInviteName] = useState('')
   const [inviteJob, setInviteJob] = useState('')
@@ -714,6 +717,21 @@ export default function AdminPage() {
     </label>
   )
 
+  // トップの Data セクションが読む公開 stats を、今の roster から再計算して書き込む。
+  // gender/手動追加を含む正確な数字はここからしか作れない（shares には無いため）。
+  async function handleUpdateStats() {
+    setStatsBusy(true)
+    setStatsMsg('')
+    try {
+      await writeStats(attendees)
+      setStatsMsg('公開データを更新しました')
+    } catch {
+      setStatsMsg('更新に失敗しました')
+    } finally {
+      setStatsBusy(false)
+    }
+  }
+
   return (
     <main className={wrapCls}>
       <Link
@@ -723,6 +741,18 @@ export default function AdminPage() {
         ← トップへ
       </Link>
       <h1 className="text-[26px] font-extrabold">管理 🍖</h1>
+
+      <section className={sectionCls}>
+        <div className="flex flex-wrap items-center gap-3">
+          <button className={quietAction} onClick={handleUpdateStats} disabled={statsBusy}>
+            {statsBusy ? '更新中…' : 'トップのData集計を更新'}
+          </button>
+          {statsMsg && <span className="text-[12px] text-ink-soft">{statsMsg}</span>}
+        </div>
+        <p className="text-[11px] text-ink-soft">
+          性別の割当や追加のあと押すと、トップの参加状況（人数・男女比・職業・狙い）に反映されます。
+        </p>
+      </section>
 
       <section className={sectionCls}>
         <h2 className={h2Cls}>確認待ち（{pending.length}）</h2>

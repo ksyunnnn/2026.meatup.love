@@ -5,6 +5,7 @@ import { TweetChip } from "@/components/tweet-chip";
 import { CONTACTS, FEE } from "@/lib/contacts";
 import { EVENT } from "@/lib/event";
 import { InstagramIcon, TwitterIcon } from "@/components/icons";
+import { DataSection } from "@/components/data-section/data-section";
 
 // Google Calendar "add event" link, built at render (static) time so the
 // multibyte title/body are encoded safely. Body keeps 2019's casual tone.
@@ -228,8 +229,11 @@ export default function Home() {
 
         <p className="mt-4">バーベキュー + 料理と酒だすよ！あとなんかいろいろ！今回もゆるく自由に楽しもうね✌</p>
 
-        <p className="mt-4">お子様連れも歓迎できるようにしたいと思ってます。事前に教えてね！</p>        
+        <p className="mt-4">お子様連れも歓迎できるようにしたいと思ってます。事前に教えてね！</p>
       </section>
+
+      {/* ── Data（参加状況の賑やかし。Wantedの上。クライアントで公開statsを購読） ── */}
+      <DataSection />
 
       {/* ── WANTED （Hero の次に重要） ── */}
       <section className="w-full max-w-[440px] px-6 py-16 text-center">
@@ -237,7 +241,7 @@ export default function Home() {
           Wanted
         </SectionHead>
         <p className="mt-4 text-[14px] text-ink-soft font-bold">
-          今のところ<span className="underline">運営こばしゅんのみ</span>！誰か助けて😭
+          運営の手伝い、ちょっとずつ集まってきてる！🙌
         </p>
         <ul className="mx-auto mt-5 grid max-w-[290px] gap-3 text-[15px]">
           {WANTED.map((w) => (
@@ -309,11 +313,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* ── 工事中セクション ── */}
-      <UnderConstruction title="Schedule" note="当日のタイムテーブルが入る予定" />
-      <UnderConstruction title="Content" note="なんかできるかな〜" />
-      <UnderConstruction title="Data" note="フォームで回答もらったやつをなんかうまくやりたい" />
-
       <section className="w-full max-w-[440px] px-6 py-16 text-center">
         <SectionHead>How to Join</SectionHead>
         <p className="mt-4 text-[14px] text-ink-soft">参加の流れはこんな感じ！</p>
@@ -364,6 +363,10 @@ export default function Home() {
           </JoinStep>
         </ol>
       </section>
+
+      {/* ── 準備中セクション（最下段） ── */}
+      <UnderConstruction title="Schedule" note="当日のタイムテーブルが入る予定" />
+      <UnderConstruction title="Content" note="なんかできるかな〜" />
 
       {/* ── フッター ── */}
       <footer className="mt-6 grid gap-1.5 px-4 text-[12px] text-ink-soft">

@@ -154,6 +154,16 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Public aggregate for the homepage "Data" section. World-readable on
+    // purpose: it holds ONLY anonymous numbers (total / gender counts / job &
+    // expectation tallies) computed by an admin from the full roster — never
+    // PII, never per-person rows. Only admins write it (recomputed from /admin),
+    // so a guest can't forge the public figures.
+    match /stats/{edition} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /admins/{uid} {
       // Single-doc read is open to any signed-in user: registration via an
       // invite must check whether the issuer is a host (admins/{issuedBy}), and

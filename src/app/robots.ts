@@ -12,7 +12,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin/', '/mypage/', '/register/', '/ticket/'],
+        disallow: ['/admin/', '/mypage/', '/register/', '/ticket/', '/preview/'],
       },
     ],
     sitemap: 'https://meatup.love/sitemap.xml',

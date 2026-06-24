@@ -292,3 +292,319 @@
     animation: none;
   }
 }
+
+/* ---- Data セクション（試作）用のモーション ---- */
+@layer components {
+  /* 串がグリルに着地（staggered。delay は要素側で指定） */
+  .ds-drop {
+    display: inline-block;
+    animation: ds-drop 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  /* バー/メーターの幅 transition */
+  .ds-bar {
+    transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  /* ドーナツの弧 */
+  .ds-arc {
+    transition: stroke-dashoffset 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  /* スパークラインの描き出し */
+  .ds-line {
+    transition: stroke-dashoffset 1.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  /* 焼け具合の熱ゆらぎ（控えめ） */
+  .ds-shimmer {
+    background-size: 200% 100%;
+    animation: ds-shimmer 2.4s ease-in-out infinite;
+  }
+  /* 案C 熾火レイヤー */
+  .ds-ember {
+    background:
+      radial-gradient(40% 60% at 20% 100%, rgba(255, 101, 0, 0.45), transparent 70%),
+      radial-gradient(45% 65% at 55% 100%, rgba(244, 160, 71, 0.4), transparent 72%),
+      radial-gradient(40% 60% at 82% 100%, rgba(179, 61, 68, 0.5), transparent 70%);
+    filter: blur(6px);
+    animation: ds-ember 3.6s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes ds-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) rotate(-7deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+}
+
+@keyframes ds-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes ds-ember {
+  from {
+    opacity: 0.75;
+    transform: translateY(2px) scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.04);
+  }
+}
+
+/* テーマ別バリエーション（🍺/🎧/🤝）のモーション */
+@layer components {
+  /* ビールの気泡が上がる */
+  .ds-bubble {
+    animation: ds-bubble 1.8s ease-in infinite;
+  }
+  /* イコライザーのバーが上下 */
+  .ds-eq {
+    transform-origin: bottom;
+    animation: ds-eq 0.8s ease-in-out infinite alternate;
+  }
+  /* 心拍に同期するEQ：lub-dub で跳ね、その後は休符（周期は要素側の duration に同期） */
+  .ds-eq-heart {
+    transform-origin: bottom;
+    animation: ds-eq-heart 2.7s ease-out infinite;
+  }
+  /* 部分一致EQ：外＝ふだんのゆらゆら（非同期）、内＝波が出た瞬間だけ上乗せ（拍に同期） */
+  .ds-eq-idle {
+    transform-origin: bottom;
+    animation: ds-eq-idle 1.1s ease-in-out infinite;
+  }
+  .ds-eq-kick {
+    transform-origin: bottom;
+    animation: ds-eq-kick 2.7s ease-out infinite;
+  }
+  /* コンステレーションのノードが瞬く */
+  .ds-twinkle {
+    animation: ds-twinkle 2.6s ease-in-out infinite;
+  }
+  /* 同心円波形：各リングを中心まわりに回転（干渉して見える） */
+  .ds-spin,
+  .ds-spin-rev {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ds-spin 16s linear infinite;
+  }
+  .ds-spin-rev {
+    animation-direction: reverse;
+  }
+  /* 水紋：中心から広がってフェード */
+  .ds-ripple {
+    transform-origin: center;
+    animation: ds-ripple 2.7s ease-out infinite;
+  }
+  /* 太鼓：拍頭で“ドン”と跳ねる（周期は要素側の animation-duration に同期） */
+  .ds-thump {
+    animation: ds-thump 2.7s ease-out infinite;
+  }
+  /* 心拍：lub-dub の2連で広がり、その後は長い休符（背景を静かに保つ） */
+  .ds-heart-ripple {
+    transform-origin: center;
+    animation: ds-heart-ripple 2.7s ease-out infinite;
+  }
+  .ds-heart-thump {
+    transform-origin: center;
+    animation: ds-heart-thump 2.7s ease-out infinite;
+  }
+}
+
+@keyframes ds-thump {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  7% {
+    transform: translate(-50%, -50%) scale(1.22);
+  }
+  28% {
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+  45%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes ds-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ds-ripple {
+  0% {
+    transform: scale(0.12);
+    opacity: 0.7;
+  }
+  70% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* 心拍の波紋：前半で広がり切って消え、後半は休符（静かな間） */
+@keyframes ds-heart-ripple {
+  0% {
+    transform: scale(0.14);
+    opacity: 0.5;
+  }
+  30% {
+    opacity: 0.16;
+  }
+  44% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* 心拍の太鼓：lub→dub のやわらかい2連、その後は休符（中心基準の scale のみ） */
+@keyframes ds-heart-thump {
+  0% {
+    transform: scale(1);
+  }
+  6% {
+    transform: scale(1.16);
+  }
+  14% {
+    transform: scale(1);
+  }
+  22% {
+    transform: scale(1.1);
+  }
+  32%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ds-bubble {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-58px) scale(1);
+  }
+}
+
+@keyframes ds-eq {
+  from {
+    transform: scaleY(0.4);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* 心拍EQ：lub→dub で2回跳ねて、その後は休符（水紋の ds-heart-ripple と同位相） */
+@keyframes ds-eq-heart {
+  0% {
+    transform: scaleY(0.5);
+  }
+  6% {
+    transform: scaleY(1);
+  }
+  15% {
+    transform: scaleY(0.6);
+  }
+  22% {
+    transform: scaleY(0.9);
+  }
+  32%,
+  100% {
+    transform: scaleY(0.5);
+  }
+}
+
+/* ふだんのゆらゆら（外側・非同期でゆっくり上下） */
+@keyframes ds-eq-idle {
+  0% {
+    transform: scaleY(0.78);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0.78);
+  }
+}
+
+/* 波の発生に同期した“上乗せ”（内側・ふだんは1倍＝無干渉、拍だけ膨らむ） */
+@keyframes ds-eq-kick {
+  0% {
+    transform: scaleY(1);
+  }
+  6% {
+    transform: scaleY(1.32);
+  }
+  15% {
+    transform: scaleY(1.05);
+  }
+  22% {
+    transform: scaleY(1.2);
+  }
+  34%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ds-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* reduced-motion：演出を止め、最終状態を即表示 */
+@media (prefers-reduced-motion: reduce) {
+  .ds-drop,
+  .ds-shimmer,
+  .ds-ember,
+  .ds-bubble,
+  .ds-eq,
+  .ds-eq-heart,
+  .ds-eq-idle,
+  .ds-eq-kick,
+  .ds-twinkle,
+  .ds-spin,
+  .ds-spin-rev,
+  .ds-ripple,
+  .ds-thump,
+  .ds-heart-ripple,
+  .ds-heart-thump {
+    animation: none;
+  }
+  .ds-bar,
+  .ds-arc,
+  .ds-line {
+    transition: none;
+  }
+  .ds-ember {
+    opacity: 0.9;
+  }
+}

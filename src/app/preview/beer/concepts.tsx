@@ -140,6 +140,35 @@ function overflowFoamStylized(): [number, number, number][] {
   })
   return c
 }
+// 縁の角からスタートして“右壁をなぞって”流れ落ちる垂れ（下へ行くほど壁側へ寄る）
+function pushRunEdge(c: [number, number, number][], x: number, top: number, len: number, r0: number) {
+  let cy = top
+  let rr = r0
+  while (cy < top + len) {
+    const drift = Math.min(5, (cy - top) * 0.06) // 下にいくほど少し右（壁側）へ
+    c.push([round2(x + drift + Math.sin(cy * 0.13) * 1.0), round2(cy), round2(Math.max(4, rr))])
+    cy += Math.max(4, rr) * 0.85
+    rr -= 0.85
+  }
+}
+// 絵文字調・右の「ふちから流れる」版：右の縁を盛り、その角から右壁をなぞって下まで垂らす
+function overflowFoamStylizedEdge(): [number, number, number][] {
+  const c: [number, number, number][] = []
+  const dome: [number, number, number][] = [
+    [-29, 4, 13],
+    [-14, -12, 15.5],
+    [0, -10, 14.5],
+    [14, -5, 13.5],
+    [26, 1, 12], // 右の縁を盛る（ここから垂れが続く）
+    [-10, -20, 9.5],
+    [10, -17, 9],
+  ]
+  for (const [dx, dy, r] of dome) c.push([A.cx + dx, A.GT + dy, r])
+  pushRunEdge(c, A.cx + 25, A.GT + 5, 74, 8.5) // 主役：右の縁から壁をなぞって下まで
+  pushRun(c, A.cx + 1, A.GT + 9, 13, 7, 5) // 脇：中央に短い垂れ
+  pushRun(c, A.cx - 21, A.GT + 7, 6, 6, 4) // 左の小さなリップ
+  return c
+}
 function drawFoamCircles(ctx: CanvasRenderingContext2D, cs: [number, number, number][]) {
   ctx.fillStyle = LINE
   for (const [x, y, r] of cs) {
@@ -155,6 +184,10 @@ function drawFoamCircles(ctx: CanvasRenderingContext2D, cs: [number, number, num
   }
 }
 function drawHypeC(ctx: CanvasRenderingContext2D, hype: number, t: number) {
+  if (hype === 5) {
+    drawFoamCircles(ctx, overflowFoamStylizedEdge()) // あふれ(縁から)・静止
+    return
+  }
   if (hype === 4) {
     drawFoamCircles(ctx, overflowFoamStylized()) // あふれ(絵文字調)
     return
@@ -270,11 +303,13 @@ function FoamSVG({ cx, baseY, k = 1, outline = true }: { cx: number; baseY: numb
 }
 
 // ════════════════════════ A / CSS ════════════════════════
-export function A_CSS({ pct, hype = 0 }: { pct: number; hype?: number }) {
+export function A_CSS({ pct, hype = 0, wob }: { pct: number; hype?: number; wob?: 'mass' | 'drip' | 'breathe' | 'mug' }) {
   const sy = surfA(pct)
   const overflow = pct >= 0.95
+  // ジョッキごと揺らす（wob='mug'）＝ルートに sway（底を軸に）
+  const rootAnim = wob === 'mug' ? { transformOrigin: '50% 100%', animation: 'foamsway 3.6s ease-in-out infinite' } : {}
   return (
-    <div className="relative" style={{ width: 120, height: 150 }}>
+    <div className="relative" style={{ width: 120, height: 150, ...rootAnim }}>
       {/* 取っ手 */}
       <div
         className="absolute"
@@ -306,15 +341,28 @@ export function A_CSS({ pct, hype = 0 }: { pct: number; hype?: number }) {
       {/* 満タン: あふれ */}
       {overflow && hype === 0 && <FoamCSS cx={A.cx} baseY={A.GT + 2} k={1.18} />}
       {/* 100%超え: 盛り上がり（ビール内現象だけ） */}
-      {hype > 0 && <HypeCSS hype={hype} />}
+      {hype > 0 &&
+        (wob && wob !== 'mug' ? (
+          <div
+            className="absolute inset-0"
+            style={{
+              transformOrigin: wob === 'drip' ? '50% 28%' : '50% 72%',
+              animation: wob === 'breathe' ? 'foambreathe 3.4s ease-in-out infinite' : 'foamsway 3.6s ease-in-out infinite',
+            }}
+          >
+            <HypeCSS hype={hype} />
+          </div>
+        ) : (
+          <HypeCSS hype={hype} />
+        ))}
     </div>
   )
 }
 
 // CSS版の「盛り上がり」＝記号なし。高い泡頭＋全方位カスケード＋しぶき＋結露/照り
 function HypeCSS({ hype }: { hype: number }) {
-  const stylized = hype === 4
-  const foam = stylized ? overflowFoamStylized() : overflowFoamCircles(hype)
+  const stylized = hype === 4 || hype === 5
+  const foam = hype === 5 ? overflowFoamStylizedEdge() : hype === 4 ? overflowFoamStylized() : overflowFoamCircles(hype)
   const flecks: [number, number][] = [
     [A.cx - 32, A.GT - 17],
     [A.cx + 30, A.GT - 14],

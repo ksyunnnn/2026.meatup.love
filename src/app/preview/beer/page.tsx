@@ -12,8 +12,7 @@ type Comp = (p: { pct: number; hype?: number }) => ReactNode
 const HYPES = [
   { lv: 1, label: 'あふれ(リアル)' },
   { lv: 4, label: 'あふれ(絵文字調)' },
-  { lv: 2, label: '噴き出し' },
-  { lv: 3, label: '最高潮' },
+  { lv: 5, label: 'あふれ(縁から)' },
 ]
 const VARIANTS: { label: string; tech: string; C: Comp; cand?: boolean }[] = [
   // ── 検討中の3候補（上段） ──
@@ -72,6 +71,9 @@ export default function BeerVariants() {
       <style>{`
         @keyframes bubrise{0%{transform:translateY(0);opacity:0}12%{opacity:.75}100%{transform:translateY(-72px);opacity:0}}
         @keyframes shine{0%{transform:translateX(0)}55%{transform:translateX(150px)}100%{transform:translateX(150px)}}
+        @keyframes foamsway{0%,100%{transform:rotate(-4.5deg)}50%{transform:rotate(4.5deg)}}
+        @keyframes foambreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+        @media (prefers-reduced-motion: reduce){[style*="foamsway"],[style*="foambreathe"]{animation:none!important}}
       `}</style>
       <h1 className="text-center font-[family-name:var(--font-display)] text-[22px]">ビール 候補比較 × 充填(10/50/80/100%) 実寸 🍺</h1>
       <p className="mt-1 text-center text-[12px] text-ink-soft">

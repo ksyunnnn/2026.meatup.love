@@ -24,7 +24,7 @@ export function BeerMug({
     <div ref={ref} className="flex flex-col items-center">
       <div className="relative h-[124px] w-[86px]">
         {/* ジョッキ */}
-        <div className="absolute inset-0 overflow-hidden rounded-b-[16px] rounded-t-[8px] border-[3px] border-ink bg-paper">
+        <div className="absolute inset-0 overflow-hidden rounded-b-[16px] rounded-t-[8px] border-[3px] border-ink bg-transparent">
           {/* ビール */}
           <div
             className="ds-bar absolute inset-x-0 bottom-0"
@@ -33,33 +33,86 @@ export function BeerMug({
               background: 'linear-gradient(180deg,#ffcf5e,#f4a047 55%,#dc7c34)',
             }}
           >
-            {/* 気泡 */}
-            {[12, 40, 64].map((x, i) => (
-              <span
-                key={x}
-                className="ds-bubble absolute bottom-2 h-1.5 w-1.5 rounded-full bg-white/70"
-                style={{ left: `${x}%`, animationDelay: `${i * 0.6}s` }}
-              />
-            ))}
+            {/* 気泡（中身を流れる泡。空に近い時は出さない） */}
+            {pct > 0.12 &&
+              [12, 40, 64].map((x, i) => (
+                <span
+                  key={x}
+                  className="ds-bubble absolute bottom-2 h-1.5 w-1.5 rounded-full bg-white/70"
+                  style={{ left: `${x}%`, animationDelay: `${i * 0.6}s` }}
+                />
+              ))}
+            {/* 泡ヘッド：液面に乗る“控えめな頭”。グラスの overflow-hidden で内幅にクリップ
+                ＝中段でも横にはみ出さない。0%付近は出さない。 */}
+            {pct > 0.05 && (
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0"
+                style={{ filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.18))' }}
+              >
+                {/* 液面のすぐ上の白帯（連結ベース） */}
+                <div
+                  className="absolute inset-x-0 rounded-t-[5px] bg-white"
+                  style={{ top: -(5 + pct * 4), height: 10 + pct * 4 }}
+                />
+                {/* ゆるい凸（控えめ・グラス内に収まる） */}
+                {[26, 50, 74].map((l, i) => {
+                  const s = (i === 1 ? 16 : 12) + Math.round(pct * 6)
+                  return (
+                    <span
+                      key={l}
+                      className="absolute -translate-x-1/2 rounded-full bg-white"
+                      style={{ left: `${l}%`, top: -(7 + pct * 7), width: s, height: s }}
+                    />
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
-        {/* 泡：満タンに近いほどモコモコ盛り上がり、縁から少しあふれる（グラス外＝クリップされない） */}
-        <div
-          className="pointer-events-none absolute left-1/2 flex items-end justify-center gap-[1px]"
-          style={{ top: `${(inView ? 1 - pct : 1) * 100}%`, transform: 'translate(-50%,-64%)' }}
-        >
-          {[11, 16, 22, 17, 12].map((s, i) => {
-            const size = Math.round(s * (0.6 + pct * 0.75))
-            const rise = Math.round([2, 8, 13, 8, 2][i] * pct)
-            return (
-              <span
-                key={i}
-                className="rounded-full bg-white"
-                style={{ width: size, height: size, marginBottom: rise }}
-              />
-            )
-          })}
-        </div>
+        {/* 満タン付近だけ：リムから少し溢れる泡＋たれ（グラス外＝クリップされない）。
+            ov は 88%→100% で 0→1。これより下では一切溢れない＝“満タンの事件”にする。 */}
+        {inView && pct > 0.88 && (
+          <>
+            {/* 溢れる小さな泡頭（リム上） */}
+            <div
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2"
+              style={{ top: 0, filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.18))' }}
+            >
+              {[-22, 0, 22].map((dx, i) => {
+                const ov = (pct - 0.88) / 0.12
+                const s = (i === 1 ? 18 : 13) + Math.round(ov * 8)
+                return (
+                  <span
+                    key={i}
+                    className="absolute -translate-x-1/2 rounded-full bg-white"
+                    style={{ left: dx, top: -Math.round(s * 0.5 + ov * 4), width: s, height: s }}
+                  />
+                )
+              })}
+            </div>
+            {/* たれ（両サイドから少し） */}
+            <span
+              className="pointer-events-none absolute rounded-b-full bg-white"
+              style={{
+                left: 11,
+                top: 2,
+                width: 7,
+                height: 9 + Math.round(((pct - 0.88) / 0.12) * 13),
+                filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.16))',
+              }}
+            />
+            <span
+              className="pointer-events-none absolute rounded-b-full bg-white"
+              style={{
+                right: 14,
+                top: 4,
+                width: 6,
+                height: 7 + Math.round(((pct - 0.88) / 0.12) * 10),
+                filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.16))',
+              }}
+            />
+          </>
+        )}
         {/* 取っ手 */}
         <div className="absolute right-[-15px] top-6 h-[46px] w-[22px] rounded-r-[14px] border-[3px] border-l-0 border-ink" />
       </div>

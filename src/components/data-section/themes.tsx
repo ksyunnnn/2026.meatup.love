@@ -9,7 +9,19 @@ import { useInView, useReducedMotion } from './widgets'
 
 // ── 🍺 ビール感：ジョッキが満ちる ───────────────────────────────────────────
 
-/** 参加の盛り上がりを「ビールが注がれて泡立つ」で。pct=満タン比。 */
+const INK = 'var(--color-ink)'
+const FOAM_FILL = '#fffdf6' // クリーム白（cream 背景から少し浮く程度）
+
+/** こぶ状の泡の上辺（左端 (0,r) から右端 (w,r) まで、bumps 個の半円ふくらみ）。 */
+function scallopTop(w: number, bumps: number, r: number) {
+  const bw = w / bumps
+  let d = `M0,${r}`
+  for (let i = 1; i <= bumps; i++) d += `A${bw / 2},${r} 0 0,1 ${i * bw},${r}`
+  return d
+}
+
+/** 参加の盛り上がりを「ビールが注がれて泡立つ」で。pct=満タン比。
+ *  画は線画トーン（グラスと同じインク線で泡も輪郭取り・中身はフラット塗り）。 */
 export function BeerMug({
   pct = 0.8,
   label = '盛り上がり',
@@ -20,17 +32,32 @@ export function BeerMug({
   sub?: string
 }) {
   const { ref, inView } = useInView<HTMLDivElement>(0.5)
+
+  // グラス内幅（外形 86 − 枠 3×2）。泡バンドはこの幅でクリップされる。
+  const innerW = 80
+  const foamR = 6 + pct * 3 // こぶの高さ（pct で少しだけ増減）
+  const bandH = foamR + 9
+  const bandTop = -(foamR + 3)
+  const bandD = `${scallopTop(innerW, 5, foamR)}L${innerW},${bandH}L0,${bandH}Z`
+
+  // 満タン付近だけ：リムから溢れる泡頭＋したたり（ov は 88%→100% で 0→1）。
+  const ov = Math.min(1, Math.max(0, (pct - 0.88) / 0.12))
+  const capR = 10 + ov * 4
+  const capW = 94
+  const capH = capR + 14
+  const capD = `${scallopTop(capW, 5, capR)}L${capW},${capH}L0,${capH}Z`
+
   return (
     <div ref={ref} className="flex flex-col items-center">
       <div className="relative h-[124px] w-[86px]">
         {/* ジョッキ */}
         <div className="absolute inset-0 overflow-hidden rounded-b-[16px] rounded-t-[8px] border-[3px] border-ink bg-transparent">
-          {/* ビール */}
+          {/* ビール（フラット塗り） */}
           <div
             className="ds-bar absolute inset-x-0 bottom-0"
             style={{
               height: inView ? `${pct * 100}%` : '0%',
-              background: 'linear-gradient(180deg,#ffcf5e,#f4a047 55%,#dc7c34)',
+              background: 'linear-gradient(180deg,#f7b13e,#ef9a32)',
             }}
           >
             {/* 気泡（中身を流れる泡。空に近い時は出さない） */}
@@ -38,78 +65,55 @@ export function BeerMug({
               [12, 40, 64].map((x, i) => (
                 <span
                   key={x}
-                  className="ds-bubble absolute bottom-2 h-1.5 w-1.5 rounded-full bg-white/70"
+                  className="ds-bubble absolute bottom-2 h-1.5 w-1.5 rounded-full bg-white/60"
                   style={{ left: `${x}%`, animationDelay: `${i * 0.6}s` }}
                 />
               ))}
-            {/* 泡ヘッド：液面に乗る“控えめな頭”。グラスの overflow-hidden で内幅にクリップ
-                ＝中段でも横にはみ出さない。0%付近は出さない。 */}
+            {/* 泡ヘッド：液面に乗るこぶ状シルエット。グラスの overflow-hidden で内幅に
+                クリップ＝中段でも横にはみ出さない。0%付近は出さない。 */}
             {pct > 0.05 && (
-              <div
-                className="pointer-events-none absolute inset-x-0 top-0"
-                style={{ filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.18))' }}
+              <svg
+                className="pointer-events-none absolute left-0"
+                style={{ top: bandTop }}
+                width={innerW}
+                height={bandH}
+                viewBox={`0 0 ${innerW} ${bandH}`}
+                fill="none"
               >
-                {/* 液面のすぐ上の白帯（連結ベース） */}
-                <div
-                  className="absolute inset-x-0 rounded-t-[5px] bg-white"
-                  style={{ top: -(5 + pct * 4), height: 10 + pct * 4 }}
+                <path
+                  d={bandD}
+                  fill={FOAM_FILL}
+                  stroke={INK}
+                  strokeWidth={2.5}
+                  strokeLinejoin="round"
                 />
-                {/* ゆるい凸（控えめ・グラス内に収まる） */}
-                {[26, 50, 74].map((l, i) => {
-                  const s = (i === 1 ? 16 : 12) + Math.round(pct * 6)
-                  return (
-                    <span
-                      key={l}
-                      className="absolute -translate-x-1/2 rounded-full bg-white"
-                      style={{ left: `${l}%`, top: -(7 + pct * 7), width: s, height: s }}
-                    />
-                  )
-                })}
-              </div>
+              </svg>
             )}
           </div>
         </div>
-        {/* 満タン付近だけ：リムから少し溢れる泡＋たれ（グラス外＝クリップされない）。
-            ov は 88%→100% で 0→1。これより下では一切溢れない＝“満タンの事件”にする。 */}
+        {/* 満タン付近だけ：リムから溢れる泡頭＋したたり（グラス外＝クリップされない）。
+            これより下では一切溢れない＝“満タンの事件”にする。 */}
         {inView && pct > 0.88 && (
           <>
-            {/* 溢れる小さな泡頭（リム上） */}
-            <div
+            {/* 溢れる泡頭（リム上） */}
+            <svg
               className="pointer-events-none absolute left-1/2 -translate-x-1/2"
-              style={{ top: 0, filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.18))' }}
+              style={{ top: -(capR + 2) }}
+              width={capW}
+              height={capH}
+              viewBox={`0 0 ${capW} ${capH}`}
+              fill="none"
             >
-              {[-22, 0, 22].map((dx, i) => {
-                const ov = (pct - 0.88) / 0.12
-                const s = (i === 1 ? 18 : 13) + Math.round(ov * 8)
-                return (
-                  <span
-                    key={i}
-                    className="absolute -translate-x-1/2 rounded-full bg-white"
-                    style={{ left: dx, top: -Math.round(s * 0.5 + ov * 4), width: s, height: s }}
-                  />
-                )
-              })}
-            </div>
-            {/* たれ（両サイドから少し） */}
+              <path d={capD} fill={FOAM_FILL} stroke={INK} strokeWidth={2.5} strokeLinejoin="round" />
+            </svg>
+            {/* したたり（両サイドから少し） */}
             <span
-              className="pointer-events-none absolute rounded-b-full bg-white"
-              style={{
-                left: 11,
-                top: 2,
-                width: 7,
-                height: 9 + Math.round(((pct - 0.88) / 0.12) * 13),
-                filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.16))',
-              }}
+              className="pointer-events-none absolute rounded-b-full border-[2.5px] border-ink"
+              style={{ left: 9, top: 3, width: 8, height: 9 + Math.round(ov * 13), background: FOAM_FILL }}
             />
             <span
-              className="pointer-events-none absolute rounded-b-full bg-white"
-              style={{
-                right: 14,
-                top: 4,
-                width: 6,
-                height: 7 + Math.round(((pct - 0.88) / 0.12) * 10),
-                filter: 'drop-shadow(0 1px 1px rgba(126,0,29,0.16))',
-              }}
+              className="pointer-events-none absolute rounded-b-full border-[2.5px] border-ink"
+              style={{ right: 12, top: 5, width: 7, height: 7 + Math.round(ov * 10), background: FOAM_FILL }}
             />
           </>
         )}

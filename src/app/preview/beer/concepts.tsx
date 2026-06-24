@@ -514,7 +514,8 @@ export function Show_Canvas({ pct = 0.55 }: { pct: number }) {
     ctx.scale(dpr, dpr)
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const sy = surfA(pct)
-    // 40粒の泡パーティクル（Canvasが得意な密度）
+    const overflow = pct >= 0.95
+    // 泡パーティクル（Canvasが得意な密度）
     const N = 42
     const ps = Array.from({ length: N }, () => ({
       x: A.GL + 4 + Math.random() * (A_W - 8),
@@ -556,9 +557,9 @@ export function Show_Canvas({ pct = 0.55 }: { pct: number }) {
       ctx.save()
       glassPath()
       ctx.clip()
-      // 泡面フィズを背後に（ビールで裾を覆う）
+      // グラス内の泡面フィズ＝輪郭なし白い雲（背後・ビールで裾を覆う）
       const fk = foamK(pct)
-      if (pct > 0.12) {
+      if (!overflow && pct > 0.12) {
         ctx.fillStyle = '#fbf6ea'
         for (const c of FOAM_CLOUD) {
           ctx.beginPath()
@@ -592,6 +593,22 @@ export function Show_Canvas({ pct = 0.55 }: { pct: number }) {
       ctx.lineWidth = 2.6
       glassPath()
       ctx.stroke()
+      // 満タン＝溢れの冠（リム上・クリップ外なので輪郭つき。A-CSS と同設定＝したたり無し）
+      if (overflow) {
+        const k = 1.18
+        ctx.fillStyle = LINE
+        for (const c of FOAM_CLOUD) {
+          ctx.beginPath()
+          ctx.arc(A.cx + c.dx * k, A.GT + 2 + c.dy * k, c.r * k + 1.4, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        ctx.fillStyle = '#fbf6ea'
+        for (const c of FOAM_CLOUD) {
+          ctx.beginPath()
+          ctx.arc(A.cx + c.dx * k, A.GT + 2 + c.dy * k, c.r * k, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
       raf = requestAnimationFrame(draw)
     }
     raf = requestAnimationFrame(draw)

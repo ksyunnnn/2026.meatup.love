@@ -8,7 +8,13 @@ import { A_SVG, A_CSS, A_Canvas, B_SVG, B_CSS, B_Canvas, Show_SVG, Show_Canvas, 
 const S = 1.3 // ネイティブ120幅 → 本番グラス幅≈86px
 const FILLS = [0.1, 0.5, 0.8, 1]
 
-type Comp = (p: { pct: number }) => ReactNode
+type Comp = (p: { pct: number; hype?: number }) => ReactNode
+const HYPES = [
+  { lv: 1, label: 'あふれ(リアル)' },
+  { lv: 4, label: 'あふれ(絵文字調)' },
+  { lv: 2, label: '噴き出し' },
+  { lv: 3, label: '最高潮' },
+]
 const VARIANTS: { label: string; tech: string; C: Comp; cand?: boolean }[] = [
   // ── 検討中の3候補（上段） ──
   { label: 'A シズル線画', tech: 'CSS', C: A_CSS, cand: true },
@@ -46,6 +52,13 @@ function VariantRow({ v }: { v: (typeof VARIANTS)[number] }) {
             <p className="mt-1 text-[11px] font-bold text-ink-soft">{Math.round(f * 100)}%</p>
           </div>
         ))}
+        {v.cand &&
+          HYPES.map((h) => (
+            <div key={h.lv} className="flex flex-col items-center">
+              <Real><C pct={1} hype={h.lv} /></Real>
+              <p className="mt-1 text-[11px] font-bold text-meat">{h.label}</p>
+            </div>
+          ))}
       </div>
     </div>
   )
@@ -65,7 +78,7 @@ export default function BeerVariants() {
         上段＝検討中の3候補。下段＝参考（他の変種）。本番グラス幅 約86px・現状は14%付近。
       </p>
 
-      <div className="mx-auto mt-8 flex max-w-[760px] flex-col gap-5">
+      <div className="mx-auto mt-8 flex max-w-[1160px] flex-col gap-5">
         {cands.map((v) => (
           <VariantRow key={v.label + v.tech} v={v} />
         ))}

@@ -57,6 +57,147 @@ function foamK(pct: number) {
   return Math.min(1, 0.5 + pct * 0.55)
 }
 
+// ── 100%超え「盛り上がり」＝ビール内現象だけ（記号は使わない） ──
+// hype: 1=あふれ / 2=噴き出し / 3=最高潮
+function cloudC(ctx: CanvasRenderingContext2D, cx: number, baseY: number, k: number) {
+  ctx.fillStyle = LINE
+  for (const c of FOAM_CLOUD) {
+    ctx.beginPath()
+    ctx.arc(cx + c.dx * k, baseY + c.dy * k, c.r * k + 1.4, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.fillStyle = FOAM
+  for (const c of FOAM_CLOUD) {
+    ctx.beginPath()
+    ctx.arc(cx + c.dx * k, baseY + c.dy * k, c.r * k, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+const round2 = (n: number) => Math.round(n * 100) / 100 // SSR/CSR の小数ズレ(hydration)防止
+// 太く→先細りの“ひと筋の流れ”（縦に重なる円・先は丸い）。x,top から len ぶん下へ
+function pushRun(c: [number, number, number][], x: number, top: number, len: number, r0: number, seed: number) {
+  let cy = top
+  let rr = r0
+  let j = 0
+  while (cy < top + len) {
+    c.push([round2(x + Math.sin(seed + j * 0.7) * 1.6), round2(cy), round2(Math.max(3.5, rr))])
+    cy += rr * 0.9
+    rr -= 0.45
+    j++
+  }
+}
+// こぼれた泡。なめらかなドーム＋“非対称・局所的”な流れ（等間隔ヒゲにしない）
+function overflowFoamCircles(hype: number): [number, number, number][] {
+  const c: [number, number, number][] = []
+  // なめらかなドーム（少しだけ縁を越える・主役の流れ側=左をやや高く）
+  const dome: [number, number, number][] = [
+    [-29, 3, 10],
+    [-17, -6, 12.5],
+    [-3, -11, 14],
+    [11, -8, 12.5],
+    [24, -1, 10.5],
+    [-10, -17, 9],
+    [7, -15, 8.5],
+  ]
+  for (const [dx, dy, r] of dome) c.push([A.cx + dx, A.GT + dy, r])
+  // 主役の流れ：左寄り1本（長い）。hype で伸びる
+  pushRun(c, A.cx - 15, A.GT + 8, 16 + hype * 9, 8.5, 1)
+  // 小さなしたたり：右寄りにちょい（短い）
+  pushRun(c, A.cx + 21, A.GT + 10, 7, 5.5, 4)
+  // 副次の流れ：噴き出し以降だけ（右中央・中くらい）
+  if (hype >= 2) pushRun(c, A.cx + 9, A.GT + 9, 9 + hype * 5, 7, 6)
+  return c
+}
+// 絵文字/イラスト調のあふれ：なめらかな丸いドーム＋短く太い“丸い垂れ”（リアルすぎない）
+function overflowFoamStylized(): [number, number, number][] {
+  const c: [number, number, number][] = []
+  // 左を高く盛って右へ流れる“非対称”ドーム（絵文字の偏り方）。一回り大きめ
+  const dome: [number, number, number][] = [
+    [-30, 3, 13.5],
+    [-15, -12, 16],
+    [-1, -10, 14.5],
+    [14, -4, 13],
+    [27, 5, 11],
+    [-11, -21, 10],
+    [11, -18, 9.5],
+  ]
+  for (const [dx, dy, r] of dome) c.push([A.cx + dx, A.GT + dy, r])
+  // こぼれは右寄りに偏らせる（主役は右側を下まで／脇1本／左は小さなリップだけ）
+  const drips: [number, number, number][] = [
+    [16, 70, 9.5], // 主役（右寄り・グラス下方まで垂らす）
+    [3, 14, 8.5], // 脇（中央・短め）
+    [-22, 7, 6.5], // 左の小さなリップ
+  ]
+  drips.forEach(([dx, len, r0]) => {
+    let cy = A.GT + 9
+    let rr = r0
+    while (cy < A.GT + 9 + len) {
+      // 下へ行くほど少し蛇行＋細く（垂れた跡）。最小幅は保つ
+      c.push([round2(A.cx + dx + Math.sin(cy * 0.12) * 1.2), round2(cy), round2(Math.max(4, rr))])
+      cy += Math.max(4, rr) * 0.85
+      rr -= 0.9
+    }
+  })
+  return c
+}
+function drawFoamCircles(ctx: CanvasRenderingContext2D, cs: [number, number, number][]) {
+  ctx.fillStyle = LINE
+  for (const [x, y, r] of cs) {
+    ctx.beginPath()
+    ctx.arc(x, y, r + 1.4, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.fillStyle = FOAM
+  for (const [x, y, r] of cs) {
+    ctx.beginPath()
+    ctx.arc(x, y, r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+function drawHypeC(ctx: CanvasRenderingContext2D, hype: number, t: number) {
+  if (hype === 4) {
+    drawFoamCircles(ctx, overflowFoamStylized()) // あふれ(絵文字調)
+    return
+  }
+  drawFoamCircles(ctx, overflowFoamCircles(hype)) // 縁から膨らんで垂れる一塊の泡（リアル）
+  // 噴き出すしぶき（＝泡のかたまり。Lv2+）
+  if (hype >= 2) {
+    const flecks: [number, number, number][] = [
+      [A.cx - 32, A.GT - 17, 1.0],
+      [A.cx + 30, A.GT - 14, 1.3],
+      [A.cx - 12, A.GT - 31, 1.6],
+      [A.cx + 16, A.GT - 28, 1.1],
+    ]
+    for (const [fx, fy, spd] of flecks) {
+      const rise = (t * spd * 6) % 14
+      cloudC(ctx, fx, fy - rise, 0.32)
+    }
+  }
+  // 最高潮：結露どっさり＋濡れたグラスの照り（記号でなく光）
+  if (hype >= 3) {
+    const extra: [number, number][] = [
+      [A.GL + 11, A.GB - 52],
+      [A.GR - 12, A.GB - 60],
+      [A.cx - 7, A.GB - 30],
+      [A.GR - 9, A.GB - 32],
+      [A.GL + 16, A.GB - 30],
+    ]
+    ctx.lineWidth = 0.8
+    ctx.strokeStyle = LINE
+    for (const [dx, dy] of extra) {
+      ctx.beginPath()
+      ctx.arc(dx, dy, 2, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'
+      ctx.fill()
+      ctx.stroke()
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.beginPath()
+    ctx.ellipse(A.GL + 12, A.GT + 32, 2.4, 9, 0.2, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
 // ════════════════════════ A / SVG ════════════════════════
 export function A_SVG({ pct }: { pct: number }) {
   const sy = surfA(pct)
@@ -129,7 +270,7 @@ function FoamSVG({ cx, baseY, k = 1, outline = true }: { cx: number; baseY: numb
 }
 
 // ════════════════════════ A / CSS ════════════════════════
-export function A_CSS({ pct }: { pct: number }) {
+export function A_CSS({ pct, hype = 0 }: { pct: number; hype?: number }) {
   const sy = surfA(pct)
   const overflow = pct >= 0.95
   return (
@@ -163,8 +304,48 @@ export function A_CSS({ pct }: { pct: number }) {
         <span key={i} className="absolute rounded-full" style={{ left: d.x - d.r, top: d.y - d.r, width: d.r * 2, height: d.r * 2, background: '#fff', border: `0.8px solid ${LINE}`, opacity: 0.85 }} />
       ))}
       {/* 満タン: あふれ */}
-      {overflow && <FoamCSS cx={A.cx} baseY={A.GT + 2} k={1.18} />}
+      {overflow && hype === 0 && <FoamCSS cx={A.cx} baseY={A.GT + 2} k={1.18} />}
+      {/* 100%超え: 盛り上がり（ビール内現象だけ） */}
+      {hype > 0 && <HypeCSS hype={hype} />}
     </div>
+  )
+}
+
+// CSS版の「盛り上がり」＝記号なし。高い泡頭＋全方位カスケード＋しぶき＋結露/照り
+function HypeCSS({ hype }: { hype: number }) {
+  const stylized = hype === 4
+  const foam = stylized ? overflowFoamStylized() : overflowFoamCircles(hype)
+  const flecks: [number, number][] = [
+    [A.cx - 32, A.GT - 17],
+    [A.cx + 30, A.GT - 14],
+    [A.cx - 12, A.GT - 31],
+    [A.cx + 16, A.GT - 28],
+  ]
+  const drops3: [number, number][] = [
+    [A.GL + 11, A.GB - 52],
+    [A.GR - 12, A.GB - 60],
+    [A.cx - 7, A.GB - 30],
+    [A.GR - 9, A.GB - 32],
+    [A.GL + 16, A.GB - 30],
+  ]
+  return (
+    <>
+      {/* 縁から膨らんで垂れる一塊の泡（暗→白で union 輪郭） */}
+      {foam.map(([x, y, r], i) => (
+        <span key={`fo${i}`} className="absolute rounded-full" style={{ left: x - r - 1.4, top: y - r - 1.4, width: (r + 1.4) * 2, height: (r + 1.4) * 2, background: LINE }} />
+      ))}
+      {foam.map(([x, y, r], i) => (
+        <span key={`ff${i}`} className="absolute rounded-full" style={{ left: x - r, top: y - r, width: r * 2, height: r * 2, background: FOAM }} />
+      ))}
+      {/* しぶき（泡のかたまり・Lv2+。絵文字調=4は無し） */}
+      {!stylized && hype >= 2 && flecks.map(([fx, fy], i) => <FoamCSS key={`fl${i}`} cx={fx} baseY={fy} k={0.32} />)}
+      {/* 最高潮：結露どっさり＋濡れガラスの照り（Lv3） */}
+      {!stylized && hype >= 3 &&
+        drops3.map(([dx, dy], i) => (
+          <span key={`d3${i}`} className="absolute rounded-full" style={{ left: dx - 2, top: dy - 2, width: 4, height: 4, background: '#fff', border: `0.8px solid ${LINE}`, opacity: 0.9 }} />
+        ))}
+      {!stylized && hype >= 3 && <span className="absolute" style={{ left: A.GL + 10, top: A.GT + 23, width: 5, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.45)', transform: 'rotate(10deg)' }} />}
+    </>
   )
 }
 function FoamCSS({ cx, baseY, k = 1, outline = true }: { cx: number; baseY: number; k?: number; outline?: boolean }) {
@@ -184,7 +365,7 @@ function FoamCSS({ cx, baseY, k = 1, outline = true }: { cx: number; baseY: numb
 }
 
 // ════════════════════════ A / Canvas ════════════════════════
-export function A_Canvas({ pct }: { pct: number }) {
+export function A_Canvas({ pct, hype = 0 }: { pct: number; hype?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const cv = ref.current
@@ -316,13 +497,14 @@ export function A_Canvas({ pct }: { pct: number }) {
         ctx.stroke()
       }
 
-      if (overflow) cloud(A.cx, A.GT + 2, 1.18)
+      if (overflow && hype === 0) cloud(A.cx, A.GT + 2, 1.18)
+      if (hype > 0) drawHypeC(ctx, hype, reduce ? 0 : el)
 
       raf = requestAnimationFrame(draw)
     }
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [pct])
+  }, [pct, hype])
   return <canvas ref={ref} style={{ width: 120, height: 150 }} />
 }
 
@@ -502,7 +684,7 @@ export function Show_SVG({ pct = 0.55 }: { pct: number }) {
 }
 
 // ── Canvas の得意技：多数の泡パーティクル（密度・揺らぎ）＋泡面のフィズ ──
-export function Show_Canvas({ pct = 0.55 }: { pct: number }) {
+export function Show_Canvas({ pct = 0.55, hype = 0 }: { pct: number; hype?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const cv = ref.current
@@ -594,7 +776,7 @@ export function Show_Canvas({ pct = 0.55 }: { pct: number }) {
       glassPath()
       ctx.stroke()
       // 満タン＝溢れの冠（リム上・クリップ外なので輪郭つき。A-CSS と同設定＝したたり無し）
-      if (overflow) {
+      if (overflow && hype === 0) {
         const k = 1.18
         ctx.fillStyle = LINE
         for (const c of FOAM_CLOUD) {
@@ -609,11 +791,12 @@ export function Show_Canvas({ pct = 0.55 }: { pct: number }) {
           ctx.fill()
         }
       }
+      if (hype > 0) drawHypeC(ctx, hype, reduce ? 0 : ts / 1000)
       raf = requestAnimationFrame(draw)
     }
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [pct])
+  }, [pct, hype])
   return <canvas ref={ref} style={{ width: 120, height: 150 }} />
 }
 

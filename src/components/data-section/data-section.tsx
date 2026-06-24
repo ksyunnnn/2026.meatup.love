@@ -14,7 +14,8 @@ import {
   JOB_WORDS,
 } from './data'
 import { CountUp, GenderDonut } from './widgets'
-import { RippleField, JobTags, BeerMug } from './themes'
+import { RippleField, JobTags } from './themes'
+import { BeerMug } from './beer-mug'
 
 const headCls =
   'font-[family-name:var(--font-display)] text-[34px] leading-none tracking-[0.02em] text-ink'
@@ -31,8 +32,11 @@ function TileLabel({ children }: { children: ReactNode }) {
   return <p className="mb-2 text-[12px] font-bold text-ink-soft">{children}</p>
 }
 
-// 開催日(2026-07-25)に向けて満ちるビール。start→event を 0→1 に。
-const EVENT_MS = new Date('2026-07-25T11:00:00+09:00').getTime()
+// 開催日(2026-07-25)に向けて満ちるビール。
+// 0%→100% は START〜3日前(FULL)で滑らかに刻む。3日前〜前日は100%でキープ。当日(EVENT_DAY)に120%へジャンプ＋揺れ。
+const EVENT_MS = new Date('2026-07-25T11:00:00+09:00').getTime() // 開催時刻（残り日数表示用）
+const EVENT_DAY_MS = new Date('2026-07-25T00:00:00+09:00').getTime() // 当日0時＝120%＆jiggle開始
+const FULL_MS = new Date('2026-07-22T00:00:00+09:00').getTime() // 3日前＝満タン100%到達
 const START_MS = new Date('2026-06-19T00:00:00+09:00').getTime()
 
 export function DataSection() {
@@ -51,10 +55,13 @@ export function DataSection() {
 
   // 開催までの割合は当日の値なので、ハイドレーション差を避けてマウント後に算出。
   const [beerPct, setBeerPct] = useState(0)
+  const [dayOf, setDayOf] = useState(false)
   const [daysLeft, setDaysLeft] = useState<number | null>(null)
   useEffect(() => {
     const now = Date.now()
-    setBeerPct(Math.max(0, Math.min(1, (now - START_MS) / (EVENT_MS - START_MS))))
+    // 3日前(FULL)で100%到達、それ以降は100%キープ。当日の120%は dayOf 側で表現。
+    setBeerPct(Math.max(0, Math.min(1, (now - START_MS) / (FULL_MS - START_MS))))
+    setDayOf(now >= EVENT_DAY_MS)
     setDaysLeft(Math.max(0, Math.ceil((EVENT_MS - now) / 86_400_000)))
   }, [])
 
@@ -67,7 +74,12 @@ export function DataSection() {
       {/* 開催日まで＝ビールジョッキ（一番上） */}
       <Tile className="mt-6">
         <TileLabel>開催日まで</TileLabel>
-        <BeerMug pct={beerPct} label="" sub={daysLeft != null ? `あと ${daysLeft} 日` : ''} />
+        <BeerMug
+          pct={beerPct}
+          dayOf={dayOf}
+          label=""
+          sub={dayOf ? '🍻 本日開催！' : daysLeft != null ? `あと ${daysLeft} 日` : ''}
+        />
       </Tile>
 
       {/* 人数＋性別＝統合（ドーナツの中心にカウンター） */}

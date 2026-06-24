@@ -33,12 +33,6 @@ export function BeerMug({
               background: 'linear-gradient(180deg,#ffcf5e,#f4a047 55%,#dc7c34)',
             }}
           >
-            {/* 泡 */}
-            <div className="absolute -top-[7px] inset-x-0 h-[14px]">
-              <div className="absolute inset-0 rounded-full bg-white/95" />
-              <div className="absolute -top-1 left-2 h-3 w-3 rounded-full bg-white/95" />
-              <div className="absolute -top-1.5 right-3 h-4 w-4 rounded-full bg-white/95" />
-            </div>
             {/* 気泡 */}
             {[12, 40, 64].map((x, i) => (
               <span
@@ -48,6 +42,23 @@ export function BeerMug({
               />
             ))}
           </div>
+        </div>
+        {/* 泡：満タンに近いほどモコモコ盛り上がり、縁から少しあふれる（グラス外＝クリップされない） */}
+        <div
+          className="pointer-events-none absolute left-1/2 flex items-end justify-center gap-[1px]"
+          style={{ top: `${(inView ? 1 - pct : 1) * 100}%`, transform: 'translate(-50%,-64%)' }}
+        >
+          {[11, 16, 22, 17, 12].map((s, i) => {
+            const size = Math.round(s * (0.6 + pct * 0.75))
+            const rise = Math.round([2, 8, 13, 8, 2][i] * pct)
+            return (
+              <span
+                key={i}
+                className="rounded-full bg-white"
+                style={{ width: size, height: size, marginBottom: rise }}
+              />
+            )
+          })}
         </div>
         {/* 取っ手 */}
         <div className="absolute right-[-15px] top-6 h-[46px] w-[22px] rounded-r-[14px] border-[3px] border-l-0 border-ink" />

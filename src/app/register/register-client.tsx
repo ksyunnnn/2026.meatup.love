@@ -8,9 +8,10 @@ import { useAuth } from '@/lib/use-auth'
 import { createAttendee, getMyAttendee } from '@/lib/attendees'
 import { JOBS } from '@/lib/profile'
 import { CONTACTS } from '@/lib/contacts'
-import { LineIcon, InstagramIcon, TwitterIcon, ShareIcon } from '@/components/icons'
+import { LineIcon, InstagramIcon, TwitterIcon } from '@/components/icons'
 import { Loading } from '@/components/load-state'
 import TicketCard from '@/components/ticket-card'
+import ShareMenu from '@/components/share-menu'
 import { displayRole, expectationChars } from '@/lib/ticket'
 import { useTicketShare } from '@/lib/use-ticket-share'
 
@@ -91,7 +92,7 @@ export default function RegisterClient() {
   // Ticket number assigned at registration → shown on the completion screen's
   // ticket without a refetch (createAttendee returns it).
   const [ticketNo, setTicketNo] = useState('')
-  const { share: shareTicket, copied } = useTicketShare(user?.uid, ticketNo)
+  const { shareLink, shareImage, copied } = useTicketShare(user?.uid, ticketNo)
   const [withKids, setWithKids] = useState(false)
   const [hasAllergy, setHasAllergy] = useState(false)
   const [allergyNote, setAllergyNote] = useState('')
@@ -255,14 +256,7 @@ export default function RegisterClient() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={shareTicket}
-          className="btn btn--primary btn--block mx-auto inline-flex max-w-[320px] items-center justify-center gap-2"
-        >
-          <ShareIcon className="h-[18px] w-[18px]" />
-          シェアする
-        </button>
+        <ShareMenu shareLink={shareLink} shareImage={shareImage} variant="button" />
         <p
           className={
             'text-[13px] font-bold text-ink-soft transition-opacity ' +

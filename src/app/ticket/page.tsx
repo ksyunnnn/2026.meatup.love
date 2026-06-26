@@ -7,7 +7,7 @@ import { useMyAttendee } from '@/lib/use-my-attendee'
 import { useTicketShare } from '@/lib/use-ticket-share'
 import { displayRole, expectationChars } from '@/lib/ticket'
 import TicketCard from '@/components/ticket-card'
-import { ShareIcon } from '@/components/icons'
+import ShareMenu from '@/components/share-menu'
 import { Loading, RetryNotice } from '@/components/load-state'
 
 const wrapCls =
@@ -15,7 +15,7 @@ const wrapCls =
 
 export default function TicketPage() {
   const { user, loading, attendee, loaded, error } = useMyAttendee()
-  const { share, copied } = useTicketShare(user?.uid, attendee?.ticketNo)
+  const { shareLink, shareImage, copied } = useTicketShare(user?.uid, attendee?.ticketNo)
 
   if (error && !loaded) {
     return <RetryNotice className={wrapCls} />
@@ -57,14 +57,7 @@ export default function TicketPage() {
         >
           ← マイページ
         </Link>
-        <button
-          type="button"
-          onClick={share}
-          aria-label="チケットをシェア"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-meat transition-colors hover:bg-cream active:scale-95"
-        >
-          <ShareIcon className="h-[22px] w-[22px]" />
-        </button>
+        <ShareMenu shareLink={shareLink} shareImage={shareImage} variant="icon" />
       </div>
 
       <div className="ticket-reveal w-full">

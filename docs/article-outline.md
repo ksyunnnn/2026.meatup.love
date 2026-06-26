@@ -60,6 +60,12 @@
 - iOS Safari 動的ツールバー: `min-h-lvh` + in-flow の border で回避
 - セキュリティ(Firestore rules): 招待トークンの使い切りをクライアントの transaction だけに依存 → SDKを介さない直接書き込みで1トークンから無制限に自己承認可 → ルールで `getAfter()` を使い「承認付き作成＝同一コミットで `invites/{token}.usedBy == 自分`」に束縛して封鎖
 - 認可設計: PII(連絡先/性別/アレルギー)は世界公開の投影 `shares/{uid}` に出さず `attendees/{uid}`(本人/admin のみ)に分離
+- Instagram ストーリー共有（詳細と出典は `docs/SHARE.md`）:
+  - 公式 Sharing to Stories は**ネイティブ専用**（iOS=`UIPasteboard`＋`instagram-stories://` / Android=`ADD_TO_STORY` Intent）。Web公式SDKは無い。stickerImage指定はブラウザの権限モデル上不可
+  - **URLの自動添付は公式不可**（API にリンクキー無し / リンクステッカーはアプリ内手動）→ **OGP画像内にQRを焼き込み**URLを担保
+  - Web完結の手段は **Web Share API（`navigator.share({ files })`）**。iOSの癖2点: ①`share()` は transient activation 必須＝画像はタップ前に先読みして `File` 化（`await fetch` 後に呼ぶと `NotAllowedError`）②`text`+`url` 併用で `url` が落ちる
+  - 画像ファイル共有だと X/LINE がカード化されない → **1入口→2択メニュー**で「リンクで共有(URL=カード)」と「画像で共有(ストーリー)」を出し分け
+  - モバイルの共有UIは**ボトムシート**(親指ゾーン)・PCは**ポップオーバー**を `@media (pointer: coarse)` で出し分け（Apple HIG=アクションシート / Material=モーダルボトムシート / 親指ゾーンは下40%で精度96% vs 上部61%）
 
 ## 6. SEO / AI 向け対応（事実）
 - `app/robots.ts`（全許可・AIクローラー含む / 認証ページ除外 / sitemap参照）
@@ -78,4 +84,13 @@
 - iOS Web Share の癖: https://adactio.com/journal/15972 , https://developer.apple.com/forums/thread/724641
 - Firebase Auth 上限: https://firebase.google.com/docs/auth/limits
 - llms.txt 現状: https://presenc.ai/research/state-of-llms-txt-2026
+- Instagram ストーリー共有（出典まとめは `docs/SHARE.md §6`）:
+  - Sharing to Stories(公式): https://developers.facebook.com/docs/instagram-platform/sharing-to-stories/
+  - リンクステッカー全開放: https://about.instagram.com/blog/announcements/expanding-sharing-links-in-stories-to-everyone
+  - Web Share API: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/share , https://web.dev/web-share/
+  - 代替(Snapchat Web SDK): https://developers.snap.com/snap-kit/creative-kit/web
+- モバイルUX(メニュー vs ボトムシート / 親指ゾーン):
+  - Apple HIG Action sheets: https://developer.apple.com/design/human-interface-guidelines/action-sheets
+  - Material 3 Bottom sheets: https://m3.material.io/components/bottom-sheets/guidelines
+  - Thumb Zone (Smashing): https://www.smashingmagazine.com/2016/09/the-thumb-zone-designing-for-mobile-users/
 </content>

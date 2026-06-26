@@ -220,6 +220,58 @@
   }
 }
 
+/* Share menu — pointer: a small "札" that drops from the trigger. */
+@layer components {
+  .share-pop {
+    transform-origin: top;
+    animation: share-pop 0.12s ease-out both;
+  }
+  /* Touch: action sheet rising from the bottom + a dimming backdrop. */
+  .share-sheet {
+    animation: share-slide-up 0.24s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .share-backdrop {
+    animation: share-fade 0.18s ease-out both;
+  }
+}
+
+@keyframes share-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes share-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes share-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-pop,
+  .share-sheet,
+  .share-backdrop {
+    animation: none;
+  }
+}
+
 /* Loading: the meat tries to bolt left but stays put (runs in place), while 💨
    puffs out behind it (to the right). A playful stand-in for a spinner. */
 @layer components {

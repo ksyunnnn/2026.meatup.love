@@ -21,6 +21,18 @@ export function ticketShareUrl(origin: string, uid: string, ticketNo?: string): 
     : `${origin}/t/${uid}`
 }
 
+// The rendered ticket OGP image itself (1200×630 PNG from the /og/{uid} Pages
+// Function) — the same artwork crawlers show as the card. We fetch THIS and
+// share it as a file so the ticket can be added to a story as an image. ?v=
+// matches the og:image url /t/{uid} emits, so we hit the same cached render.
+// The QR baked into the image carries the share link, so the url survives even
+// on share targets that drop accompanying text.
+export function ticketOgImageUrl(origin: string, uid: string, ticketNo?: string): string {
+  return ticketNo
+    ? `${origin}/og/${encodeURIComponent(uid)}?v=${encodeURIComponent(ticketNo)}`
+    : `${origin}/og/${encodeURIComponent(uid)}`
+}
+
 // {tagline}\n\n{participation}\n{url}. ONE url only — a second (homepage) link
 // would make X/Twitter card that one and drop the personalized ticket preview.
 export function buildTicketShareText(tagline: string, url: string): string {

@@ -33,14 +33,6 @@ export function ticketOgImageUrl(origin: string, uid: string, ticketNo?: string)
     : `${origin}/og/${encodeURIComponent(uid)}`
 }
 
-// The 9:16 (1080×1920) variant of the same image — the landscape OGP would sit
-// letterboxed in the middle of an Instagram story, so we share this instead: the
-// same card centered on a full cream canvas. ?o=story switches the Pages
-// Function to the portrait render; ?v keeps the per-ticket cache-bust.
-export function ticketStoryImageUrl(origin: string, uid: string, ticketNo?: string): string {
-  return `${ticketOgImageUrl(origin, uid, ticketNo)}${ticketNo ? '&' : '?'}o=story`
-}
-
 // {tagline}\n\n{participation}\n{url}. ONE url only — a second (homepage) link
 // would make X/Twitter card that one and drop the personalized ticket preview.
 export function buildTicketShareText(tagline: string, url: string): string {

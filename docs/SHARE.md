@@ -70,12 +70,16 @@ Snapchat の [Creative Kit for Web](https://developers.snap.com/snap-kit/creativ
 
 - 出典: [Apple HIG — Action sheets](https://developer.apple.com/design/human-interface-guidelines/action-sheets) / [Apple HIG — Menus and actions](https://developer.apple.com/design/human-interface-guidelines/menus-and-actions) / [Material 3 — Bottom sheets](https://m3.material.io/components/bottom-sheets/guidelines) / [Material 3 — Menus](https://m3.material.io/components/menus/guidelines) / [Smashing Magazine — The Thumb Zone](https://www.smashingmagazine.com/2016/09/the-thumb-zone-designing-for-mobile-users/) / [LukeW — Designing for Large Screen Smartphones](https://www.lukew.com/ff/entry.asp?1927=)
 
-### ストーリー画像は 9:16（1080×1920）で渡す
+### ストーリー画像は 9:16（1080×1920）で渡す（クライアント合成）
 横長OGP(1200×630)をそのままストーリーに渡すと、9:16キャンバスの中央に帯状に乗り、上下を
 Instagram が画像から拾った色で自動補完する（＝スカスカに見える）。対策として「画像で共有」は
-**`/og/{uid}?o=story` の縦長バリアント**を渡す（同じカードをクリーム全面キャンバスに中央配置）。
-横長OGPは X/LINE のカード用に温存（用途が別）。実装は `functions/og/[id].js`（`fmt='story'` で
-1080×1920・`?o` でキャッシュ別管理）/ `src/lib/share.ts` の `ticketStoryImageUrl()`。
+**1080×1920 のクリーム全面に横長カードを中央配置した画像**を渡す。横長OGPは X/LINE のカード用に温存。
+- **合成はエッジでなくブラウザ（Canvas）で行う**: `functions/og` で 1080×1920 を描画すると Cloudflare の
+  Worker CPU 上限に当たり **`error 1102`（ハード障害＝try/catch でも拾えない）**。横長(1200×630)は軽くて
+  通るが縦長は重すぎる。クライアントの `canvas.drawImage` 1回なら CPU 上限なし・フル解像度。
+- 実装: `src/lib/use-ticket-share.ts` の `toStoryBlob()`（横長PNGを取得→1080×1920クリーム地に中央描画→
+  `toBlob`）。同一オリジンなので canvas taint なし。合成不可の端末は横長のままフォールバック。
+- 横長OGPは元々カード左右にクリーム余白があるため、合成後は**四方に余白**が付く。
 
 ### 採用: 入力デバイスで出し分け（レスポンシブ）
 Apple が画面幅で「ポップオーバー⇄シート」を切替えるのと同じ発想を、Web では `@media (pointer: coarse)` で再現（ライブラリ不要・ゼロランタイムTailwindに適合）。

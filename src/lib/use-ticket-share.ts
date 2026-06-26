@@ -1,18 +1,49 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { buildTicketShareText, pickTagline, ticketShareUrl, ticketStoryImageUrl } from './share'
+import { buildTicketShareText, pickTagline, ticketOgImageUrl, ticketShareUrl } from './share'
 
-// Fetch the 9:16 ticket PNG (1080×1920) as a File so it can ride in a Web Share
-// payload — the portrait variant fills an Instagram story instead of sitting
-// letterboxed. Same-origin, so no CORS. Returns null if the render isn't ready
-// or we're offline, so the caller falls back to a plain url/text share.
+// Compose the 9:16 (1080×1920) story image in the browser: the landscape ticket
+// PNG drawn centered on a full cream canvas, so it fills an Instagram story
+// instead of sitting letterboxed in the middle. Done client-side on purpose —
+// rendering 1080×1920 on the edge trips Cloudflare's Worker CPU limit (1102),
+// whereas a single canvas draw here is cheap and full-resolution.
+const STORY_W = 1080
+const STORY_H = 1920
+const CREAM = '#fff7ef' // --color-cream
+
+async function toStoryBlob(landscape: Blob): Promise<Blob> {
+  const bmp = await createImageBitmap(landscape)
+  const canvas = document.createElement('canvas')
+  canvas.width = STORY_W
+  canvas.height = STORY_H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('no 2d context')
+  ctx.fillStyle = CREAM
+  ctx.fillRect(0, 0, STORY_W, STORY_H)
+  // Fit to width, center vertically. The landscape already carries cream side
+  // margins, so the card lands with breathing room on all four sides.
+  const h = (bmp.height / bmp.width) * STORY_W
+  ctx.drawImage(bmp, 0, (STORY_H - h) / 2, STORY_W, h)
+  return await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'),
+  )
+}
+
+// Fetch the ticket PNG and compose it into a story-shaped File. Same-origin, so
+// no CORS / canvas taint. Returns null if the render isn't ready or we're
+// offline; falls back to the raw landscape image if compositing is unavailable.
 async function fetchTicketImage(uid: string, ticketNo?: string): Promise<File | null> {
   try {
-    const res = await fetch(ticketStoryImageUrl(window.location.origin, uid, ticketNo))
+    const res = await fetch(ticketOgImageUrl(window.location.origin, uid, ticketNo))
     if (!res.ok) return null
     const blob = await res.blob()
-    return new File([blob], 'meatup2026-ticket.png', { type: 'image/png' })
+    try {
+      const story = await toStoryBlob(blob)
+      return new File([story], 'meatup2026-ticket.png', { type: 'image/png' })
+    } catch {
+      return new File([blob], 'meatup2026-ticket.png', { type: 'image/png' })
+    }
   } catch {
     return null
   }

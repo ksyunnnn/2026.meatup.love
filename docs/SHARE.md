@@ -70,6 +70,13 @@ Snapchat の [Creative Kit for Web](https://developers.snap.com/snap-kit/creativ
 
 - 出典: [Apple HIG — Action sheets](https://developer.apple.com/design/human-interface-guidelines/action-sheets) / [Apple HIG — Menus and actions](https://developer.apple.com/design/human-interface-guidelines/menus-and-actions) / [Material 3 — Bottom sheets](https://m3.material.io/components/bottom-sheets/guidelines) / [Material 3 — Menus](https://m3.material.io/components/menus/guidelines) / [Smashing Magazine — The Thumb Zone](https://www.smashingmagazine.com/2016/09/the-thumb-zone-designing-for-mobile-users/) / [LukeW — Designing for Large Screen Smartphones](https://www.lukew.com/ff/entry.asp?1927=)
 
+### ストーリー画像は 9:16（1080×1920）で渡す
+横長OGP(1200×630)をそのままストーリーに渡すと、9:16キャンバスの中央に帯状に乗り、上下を
+Instagram が画像から拾った色で自動補完する（＝スカスカに見える）。対策として「画像で共有」は
+**`/og/{uid}?o=story` の縦長バリアント**を渡す（同じカードをクリーム全面キャンバスに中央配置）。
+横長OGPは X/LINE のカード用に温存（用途が別）。実装は `functions/og/[id].js`（`fmt='story'` で
+1080×1920・`?o` でキャッシュ別管理）/ `src/lib/share.ts` の `ticketStoryImageUrl()`。
+
 ### 採用: 入力デバイスで出し分け（レスポンシブ）
 Apple が画面幅で「ポップオーバー⇄シート」を切替えるのと同じ発想を、Web では `@media (pointer: coarse)` で再現（ライブラリ不要・ゼロランタイムTailwindに適合）。
 - **タッチ（coarse）** → 下からのアクションシート（暗幕＋grabber＋全幅の大きな行＋safe-area＋背景スクロールロック、`createPortal` で body 直下）。

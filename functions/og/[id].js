@@ -9,9 +9,6 @@ import { ImageResponse, loadGoogleFont } from 'workers-og'
 import { isValidId, escapeHtml, fetchShare } from '../_lib/shares.js'
 import { qrDataUrl } from '../_lib/qr.js'
 
-const W = 1200
-const H = 630
-
 // --- Reliability layer -------------------------------------------------------
 // Rendering this PNG (Satori layout + resvg raster) is CPU-heavy. On Cloudflare
 // it intermittently trips `error 1102` (Worker CPU limit) and, since Pages
@@ -116,9 +113,13 @@ const svgUrl = (svg) => 'data:image/svg+xml;base64,' + btoa(svg)
 export const onRequestGet = async ({ params, env, request, waitUntil }) => {
   if (!isValidId(params.id)) return new Response('Not found', { status: 404 })
 
-  const origin = new URL(request.url).origin
+  const url = new URL(request.url)
+  const origin = url.origin
+  // ?o=story → the 9:16 variant the ticket page shares to Instagram stories.
+  // Default (no param) stays the 1200×630 OGP that crawlers/X/LINE cards use.
+  const fmt = url.searchParams.get('o') === 'story' ? 'story' : 'og'
   const cache = caches.default
-  // Cache key includes the ?v=ticketNo so a re-issued ticket renders fresh.
+  // Cache key includes the ?v=ticketNo (and ?o) so each variant renders fresh.
   const cacheKey = new Request(request.url, { method: 'GET' })
 
   // Treat a cache-storage error as a miss, not a 500 — the whole point is that
@@ -134,14 +135,14 @@ export const onRequestGet = async ({ params, env, request, waitUntil }) => {
   if (!env.FIREBASE_PROJECT_ID) return genericCard(origin)
 
   try {
-    return await render(params, env, origin, cache, waitUntil, cacheKey)
+    return await render(params, env, origin, cache, waitUntil, cacheKey, fmt)
   } catch {
     // Any catchable failure (Firestore, font fetch, render throw) → still a card.
     return genericCard(origin)
   }
 }
 
-const render = async (params, env, origin, cache, waitUntil, cacheKey) => {
+const render = async (params, env, origin, cache, waitUntil, cacheKey, fmt) => {
   const share = await fetchShare(env, params.id)
   if (!share) return genericCard(origin)
 
@@ -175,8 +176,7 @@ const render = async (params, env, origin, cache, waitUntil, cacheKey) => {
     ? `<div style="display:flex;font-size:21px;letter-spacing:6px;color:${C.inkSoft};margin-bottom:12px">${escapeHtml(role)}</div>`
     : ''
 
-  const html = `
-    <div style="display:flex;width:${W}px;height:${H}px;background:${C.cream};align-items:center;justify-content:center;font-family:'Noto Sans JP'">
+  const card = `
       <div style="position:relative;display:flex;width:1080px;height:500px;background:${C.paper};border:3px solid ${C.ink};border-radius:36px;box-shadow:0 8px 16px rgba(126,0,29,0.15);overflow:hidden">
 
         <div style="position:relative;display:flex;flex-direction:column;flex:1;justify-content:space-between;padding:56px 60px 40px;overflow:hidden">
@@ -222,7 +222,17 @@ const render = async (params, env, origin, cache, waitUntil, cacheKey) => {
             <div style="display:flex;font-size:24px;font-weight:700;color:${C.meat};letter-spacing:1px">${escapeHtml(ticketNo)}</div>
           </div>
         </div>
-      </div>
+      </div>`
+
+  // og = 1200×630 (the X/LINE / crawler card). story = 1080×1920 (the same card
+  // centered on a full cream canvas, so it fills an Instagram story instead of
+  // sitting letterboxed in the middle of a 9:16 frame).
+  const STORY = fmt === 'story'
+  const W = STORY ? 1080 : 1200
+  const H = STORY ? 1920 : 630
+  const html = `
+    <div style="display:flex;${STORY ? 'flex-direction:column;' : ''}width:${W}px;height:${H}px;background:${C.cream};align-items:center;justify-content:center;font-family:'Noto Sans JP'">
+      ${card}
     </div>`
 
   // Subset each font to exactly the glyphs we draw (keeps the request small).

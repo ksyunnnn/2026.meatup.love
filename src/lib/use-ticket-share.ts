@@ -1,15 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { buildTicketShareText, pickTagline, ticketOgImageUrl, ticketShareUrl } from './share'
+import { buildTicketShareText, pickTagline, ticketShareUrl, ticketStoryImageUrl } from './share'
 
-// Fetch the rendered ticket OGP PNG (1200×630) as a File so it can ride in a
-// Web Share payload — this is what lets the ticket be added to a story as an
-// image. Same-origin, so no CORS. Returns null if the render isn't ready or
-// we're offline, so the caller falls back to a plain url/text share.
+// Fetch the 9:16 ticket PNG (1080×1920) as a File so it can ride in a Web Share
+// payload — the portrait variant fills an Instagram story instead of sitting
+// letterboxed. Same-origin, so no CORS. Returns null if the render isn't ready
+// or we're offline, so the caller falls back to a plain url/text share.
 async function fetchTicketImage(uid: string, ticketNo?: string): Promise<File | null> {
   try {
-    const res = await fetch(ticketOgImageUrl(window.location.origin, uid, ticketNo))
+    const res = await fetch(ticketStoryImageUrl(window.location.origin, uid, ticketNo))
     if (!res.ok) return null
     const blob = await res.blob()
     return new File([blob], 'meatup2026-ticket.png', { type: 'image/png' })

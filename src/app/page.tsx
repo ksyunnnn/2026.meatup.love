@@ -6,6 +6,7 @@ import { CONTACTS, FEE } from "@/lib/contacts";
 import { EVENT } from "@/lib/event";
 import { InstagramIcon, TwitterIcon } from "@/components/icons";
 import { DataSection } from "@/components/data-section/data-section";
+import { FriendsSection } from "@/components/friends-section";
 
 // Google Calendar "add event" link, built at render (static) time so the
 // multibyte title/body are encoded safely. Body keeps 2019's casual tone.
@@ -32,14 +33,6 @@ const CAL_URL =
 
 const headCls =
   "font-[family-name:var(--font-display)] text-[34px] leading-none tracking-[0.02em] text-ink";
-
-// People we're looking for. Hero's the headline; this is the next thing we
-// want eyes on, so it sits right under the fold.
-const WANTED = [
-  { emoji: "🎧", label: "DJやってくれる人" },
-  { emoji: "🍸", label: "スナック・バーやってくれる人" },
-  { emoji: "🛠", label: "運営ちょい手伝ってくれる人" },
-];
 
 // Venue photos (pre-resized into public/venue). The rooftop is the lead shot;
 // these three sit below it. All are 1F except the rooftop terrace (3F).
@@ -206,7 +199,8 @@ export default function Home() {
   return (
     // Invitation-card red frame on <main> itself (in-flow, never position:fixed)
     // so it wraps ALL sections and dodges Safari's dynamic-toolbar gap. The page
-    // now scrolls through Hero → Wanted → Schedule/Content/Data → footer.
+    // scrolls through Hero → About → Data → Friends → Venue →
+    // How to Join → Schedule → footer → Hero recap.
     <main className="flex min-h-lvh flex-col items-center border-[12px] border-meat bg-cream pb-[calc(2.5rem_+_env(safe-area-inset-bottom))] text-center">
       <script
         type="application/ld+json"
@@ -235,44 +229,9 @@ export default function Home() {
       {/* ── Data（参加状況の賑やかし。Wantedの上。クライアントで公開statsを購読） ── */}
       <DataSection />
 
-      {/* ── WANTED （Hero の次に重要） ── */}
-      <section className="w-full max-w-[440px] px-6 py-16 text-center">
-        <SectionHead>
-          Wanted
-        </SectionHead>
-        <p className="mt-4 text-[14px] text-ink-soft font-bold">
-          運営の手伝い、ちょっとずつ集まってきてる！🙌
-        </p>
-        <ul className="mx-auto mt-5 grid max-w-[290px] gap-3 text-[15px]">
-          {WANTED.map((w) => (
-            <li key={w.label} className="flex items-center justify-center gap-2">
-              <span className="text-[20px]">{w.emoji}</span>
-              <span className="font-bold">{w.label}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-5 flex flex-wrap items-center justify-center gap-x-1 text-[13px] text-ink-soft">
-          やりたい！気になる！って人はこばしゅんに連絡を →
-          <a
-            href={CONTACTS.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Instagram で連絡"
-            className="inline-flex h-11 w-11 items-center justify-center text-[#E4405F] transition-colors hover:text-meat"
-          >
-            <InstagramIcon className="h-[22px] w-[22px]" />
-          </a>
-          <a
-            href={CONTACTS.twitter}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Twitter で連絡"
-            className="inline-flex h-11 w-11 items-center justify-center text-[#1DA1F2] transition-colors hover:text-meat"
-          >
-            <TwitterIcon className="h-[22px] w-[22px]" />
-          </a>
-        </p>
-      </section>
+      {/* ── Friends（当日、場をつくる仲間たち。確定した人を出す。素材が届いた
+             人だけ表示され、居なければセクションごと非表示） ── */}
+      <FriendsSection />
 
       {/* ── 会場 ── */}
       <section className="w-full max-w-[480px] px-6 py-16 text-center">
@@ -313,7 +272,7 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="w-full max-w-[440px] px-6 py-16 text-center">
+      <section id="join" className="w-full max-w-[440px] px-6 py-16 text-center">
         <SectionHead>How to Join</SectionHead>
         <p className="mt-4 text-[14px] text-ink-soft">参加の流れはこんな感じ！</p>
 
@@ -364,9 +323,8 @@ export default function Home() {
         </ol>
       </section>
 
-      {/* ── 準備中セクション（最下段） ── */}
+      {/* ── 準備中セクション（最下段）。Content は Friends に役割を譲って廃止 ── */}
       <UnderConstruction title="Schedule" note="当日のタイムテーブルが入る予定" />
-      <UnderConstruction title="Content" note="なんかできるかな〜" />
 
       {/* ── フッター ── */}
       <footer className="mt-6 grid gap-1.5 px-4 text-[12px] text-ink-soft">

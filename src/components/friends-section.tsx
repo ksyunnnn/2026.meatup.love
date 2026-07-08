@@ -19,7 +19,7 @@ type Friend = {
   theme: Theme; // 4本柱のどれを持ち込むか
   role: string; // 肩書き＝軽い紹介文
   name: string; // 名前 or 屋号
-  insta: string; // @なしのハンドル
+  insta: string; // @なしのハンドル（無い人は "" ＝ リンクを出さない）
   photo: string; // 例: "/friends/dj.jpg"（正方形）
 };
 
@@ -27,9 +27,11 @@ const FRIENDS: Friend[] = [
   { theme: "music", role: "DJ from 高円寺", name: "Reed", insta: "bbqsauceandspice", photo: "/friends/reed.jpg" },
   { theme: "meat", role: "料理するひと", name: "Naoki Kimura", insta: "kmnaoki_1118", photo: "/friends/naoki.jpg" },
   { theme: "drink", role: "ワインと野菜にやさしい", name: "KOHEi", insta: "winetokotoba", photo: "/friends/kohei.jpg" },
+  { theme: "connect", role: "スナックのママ", name: "trkrtps", insta: "", photo: "/friends/trkrtps.png" },
 ];
 
-const READY = FRIENDS.filter((f) => f.name && f.insta && f.photo);
+// insta は任意（無い人も出す）。name と photo が揃っていれば表示。
+const READY = FRIENDS.filter((f) => f.name && f.photo);
 
 const headCls =
   "font-[family-name:var(--font-display)] text-[34px] leading-none tracking-[0.02em] text-ink";
@@ -73,15 +75,22 @@ export function FriendsSection() {
             </div>
             {/* アイデンティティ＝顔・名前・ID を一塊に（写真の直下に名前、IDを密着） */}
             <p className="mt-3 font-bold leading-tight text-ink">{f.name}</p>
-            <a
-              href={`https://instagram.com/${f.insta}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${f.name} の Instagram`}
-              className="mt-0.5 block max-w-full truncate text-[11px] font-semibold text-ink-soft/70 transition-colors hover:text-meat"
-            >
-              @{f.insta}
-            </a>
+            {/* insta がある人だけリンク。無い人は高さだけ予約して行を揃える */}
+            {f.insta ? (
+              <a
+                href={`https://instagram.com/${f.insta}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${f.name} の Instagram`}
+                className="mt-0.5 block max-w-full truncate text-[11px] font-semibold text-ink-soft/70 transition-colors hover:text-meat"
+              >
+                @{f.insta}
+              </a>
+            ) : (
+              <span className="mt-0.5 block text-[11px] leading-[1.2]" aria-hidden>
+                &nbsp;
+              </span>
+            )}
             {/* ディスクリプタ（何をする人か）＝バッジと同カテゴリ。少し離して分離 */}
             <p className="mt-3 text-[12px] font-bold leading-tight text-ink-soft">{f.role}</p>
           </div>

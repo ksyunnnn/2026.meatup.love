@@ -39,8 +39,12 @@
 - スタイル: Tailwind v4。トークンは `globals.css` の `@theme`。
   **赤枠は `main` 自身の border（in-flow・position:fixed を使わない）**＝iOS Safari の動的ツールバー
   問題を回避（`min-h-lvh`＋cream背景）。`src/components/icons.tsx` にブランドアイコン（IG/Twitter/LINE）。
-- トップ（2026-06-19 改）: **マルチセクション**（Hero → About → **Wanted** → Schedule/Content/Data（🚧準備中）→
-  **How to Join**（番号ステップ）→ footer → **末尾に Hero recap**）。Hero は共通コンポーネント化（トップ=全画面/h1、
+- トップ: **マルチセクション**（Hero → About → **Schedule**（当日タイムテーブル・2026-07-14 公開）→ Data → Friends →
+  Venue → **How to Join**（番号ステップ）→ footer → **末尾に Hero recap**）。
+  - Schedule（`components/schedule-section.tsx`）: 時刻＝meat赤の表示フォント左列＋内容の二列（枠なし・薄罫線）。
+    時刻は全行 `HH:MM` で揃え、範囲がある行だけ下に `–終了` を小さく添える。`by ○○`＝当日を作る Meat Mate
+    （Friends の3人と一致）。DJ だけ `by Reed and You`（"and You"＝参加者も主役、の誘い・ink-soft）。
+    増減は `SLOTS` 配列を編集するだけ。Hero は共通コンポーネント化（トップ=全画面/h1、
   末尾=コンパクト recap・**SPはフル/PCはマスコット〜日時を省きボタンのみ**＝`display:contents`＋`sm:hidden`）。
   - マスコット＝oniku（2018/2019共通 SVG、`public/oniku.svg`／`Oniku`）。Hero のは**タップで跳ねる**
     （`BounceOniku`＝animate.css、連打で激化・マウントで落下→jiggle）。
@@ -169,7 +173,7 @@ commit `8044bc7`（編集/統合・ルール変更なし）＋後続コミット
 - 検証用ルート `src/app/friends-preview/` は撤去済み。※プレビュー用 Pages ブランチ `friends-preview` は残置（無害・未リンク）。
 
 ## 残タスク
-- [ ] **Schedule の中身**（当日タイムテーブル。現在 🚧準備中の placeholder）。
+- [x] **Schedule の中身**（当日タイムテーブル・2026-07-14 公開。トップ先頭＝Data の上に配置）。
 
 ### クローズ済み（2026-07-01・運用判断＝いずれも問題化せずクローズ）
 以下は未完 or 任意だが、**実運用で問題になっていない**ためオープン扱いをやめる（履歴として残す）。再燃したら復活。

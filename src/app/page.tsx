@@ -7,6 +7,7 @@ import { EVENT } from "@/lib/event";
 import { InstagramIcon, TwitterIcon } from "@/components/icons";
 import { DataSection } from "@/components/data-section/data-section";
 import { FriendsSection } from "@/components/friends-section";
+import { ScheduleSection } from "@/components/schedule-section";
 
 // Google Calendar "add event" link, built at render (static) time so the
 // multibyte title/body are encoded safely. Body keeps 2019's casual tone.
@@ -69,20 +70,6 @@ function SectionHead({ children }: { children: React.ReactNode }) {
       <h2 className={headCls}>{children}</h2>
       <div className="mx-auto mt-3 h-[3px] w-10 rounded-full bg-meat/60" />
     </>
-  );
-}
-
-function UnderConstruction({ title, note }: { title: string; note: string }) {
-  return (
-    <section className="w-full max-w-[440px] px-6 py-16 text-center">
-      <SectionHead>{title}</SectionHead>
-      <p className="mt-4">
-        <span className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-paper px-4 py-1.5 text-[13px] font-bold text-ink-soft">
-          🚧 準備中
-        </span>
-      </p>
-      <p className="mt-2 text-[13px] text-ink-soft">{note}</p>
-    </section>
   );
 }
 
@@ -199,8 +186,8 @@ export default function Home() {
   return (
     // Invitation-card red frame on <main> itself (in-flow, never position:fixed)
     // so it wraps ALL sections and dodges Safari's dynamic-toolbar gap. The page
-    // scrolls through Hero → About → Data → Friends → Venue →
-    // How to Join → Schedule → footer → Hero recap.
+    // scrolls through Hero → About → Schedule → Data → Friends → Venue →
+    // How to Join → footer → Hero recap.
     <main className="flex min-h-lvh flex-col items-center border-[12px] border-meat bg-cream pb-[calc(2.5rem_+_env(safe-area-inset-bottom))] text-center">
       <script
         type="application/ld+json"
@@ -226,7 +213,10 @@ export default function Home() {
         <p className="mt-4">お子様連れも歓迎できるようにしたいと思ってます。事前に教えてね！</p>
       </section>
 
-      {/* ── Data（参加状況の賑やかし。Wantedの上。クライアントで公開statsを購読） ── */}
+      {/* ── Schedule（当日のタイムテーブル。トップの先頭セクション＝Dataの上） ── */}
+      <ScheduleSection />
+
+      {/* ── Data（参加状況の賑やかし。Scheduleの下。クライアントで公開statsを購読） ── */}
       <DataSection />
 
       {/* ── Friends（当日、場をつくる仲間たち。確定した人を出す。素材が届いた
@@ -322,9 +312,6 @@ export default function Home() {
           </JoinStep>
         </ol>
       </section>
-
-      {/* ── 準備中セクション（最下段）。Content は Friends に役割を譲って廃止 ── */}
-      <UnderConstruction title="Schedule" note="当日のタイムテーブルが入る予定" />
 
       {/* ── フッター ── */}
       <footer className="mt-6 grid gap-1.5 px-4 text-[12px] text-ink-soft">

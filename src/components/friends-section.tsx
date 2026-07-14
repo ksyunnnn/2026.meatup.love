@@ -21,11 +21,13 @@ type Friend = {
   name: string; // 名前 or 屋号
   insta: string; // @なしのハンドル（無い人は "" ＝ リンクを出さない）
   photo: string; // 例: "/friends/dj.jpg"（正方形）
+  storeInsta?: string; // お店の@なしハンドル（href用。持つ人だけ＝2本目のInstaリンクを出す）
+  storeName?: string; // お店の表示名（例 "Sakémblage"＝大文字/アクセントはブランド表記。省略時は @storeInsta を表示）
 };
 
 const FRIENDS: Friend[] = [
   { theme: "music", role: "DJ from 高円寺", name: "Reed", insta: "bbqsauceandspice", photo: "/friends/reed.jpg" },
-  { theme: "meat", role: "料理するひと", name: "Naoki Kimura", insta: "kmnaoki_1118", photo: "/friends/naoki.jpg" },
+  { theme: "meat", role: "料理するひと", name: "Naoki Kimura", insta: "kmnaoki_1118", photo: "/friends/naoki.jpg", storeInsta: "sakemblage", storeName: "Sakémblage" },
   { theme: "drink", role: "ワインと野菜にやさしい", name: "KOHEi", insta: "winetokotoba", photo: "/friends/kohei.jpg" },
   { theme: "connect", role: "スナックのママ", name: "trkrtps", insta: "", photo: "/friends/trkrtps.png" },
 ];
@@ -91,8 +93,27 @@ export function FriendsSection() {
                 &nbsp;
               </span>
             )}
-            {/* ディスクリプタ（何をする人か）＝バッジと同カテゴリ。少し離して分離 */}
-            <p className="mt-3 text-[12px] font-bold leading-tight text-ink-soft">{f.role}</p>
+            {/* ディスクリプタ（何をする人か）＝バッジと同カテゴリ。少し離して分離。
+                お店がある人は紹介文の中に店名をテキストリンクで織り込む */}
+            <p className="mt-3 text-[12px] font-bold leading-tight text-ink-soft">
+              {f.storeInsta ? (
+                <>
+                  {f.role}
+                  {" from "}
+                  <a
+                    href={`https://instagram.com/${f.storeInsta}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${f.storeName ?? f.storeInsta} の Instagram`}
+                    className="text-[11px] font-semibold text-ink-soft/70 transition-colors hover:text-meat"
+                  >
+                    {f.storeName ?? f.storeInsta}
+                  </a>
+                </>
+              ) : (
+                f.role
+              )}
+            </p>
           </div>
         ))}
 

@@ -17,6 +17,7 @@
     "animate.css": "^4.1.1",
     "canvas-confetti": "^1.9.4",
     "firebase": "^12.14.0",
+    "jsqr": "^1.4.0",
     "next": "16.2.9",
     "postcss": "^8.5.15",
     "qrcode-generator": "^2.0.4",

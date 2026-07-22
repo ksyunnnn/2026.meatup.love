@@ -285,6 +285,22 @@
     display: inline-block;
     animation: meat-puff 0.6s ease-out infinite;
   }
+
+  /* SSR rarity stamp on a 名刺 card (/game). Metallic gradient with a cream halo
+     so it stays legible where it overhangs the card edge. The halo is stacked
+     drop-shadows, not -webkit-text-stroke: a stroke paints OVER a
+     background-clip:text fill and swallows the letters. Upright — the slant read
+     as costume on a card this small. */
+  .ssr-stamp {
+    display: inline-block;
+    letter-spacing: -0.01em;
+    background: linear-gradient(165deg, #ffd472 4%, #ff7a00 48%, #a83a0c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 1.2px #fffaf4) drop-shadow(0 0 1.2px #fffaf4)
+      drop-shadow(0 0 1.2px #fffaf4) drop-shadow(0 1.5px 1.5px rgba(90, 30, 5, 0.45));
+  }
 }
 
 @keyframes meat-run {

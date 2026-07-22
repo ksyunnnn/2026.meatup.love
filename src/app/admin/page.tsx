@@ -742,6 +742,24 @@ export default function AdminPage() {
       </Link>
       <h1 className="text-[26px] font-extrabold">管理 🍖</h1>
 
+      {/* 当日の会場ゲーム運営の入口一式（司会リモート・SSR設定・会場スクリーン）。
+          いずれもURL直打ちしかなかったのでダッシュボード先頭にまとめる。 */}
+      <section className={sectionCls}>
+        <h2 className={h2Cls}>Meat &amp; Greet（会場ゲーム）</h2>
+        <p className="text-[12px] text-ink-soft">当日の会場ゲームの運営一式。</p>
+        <div className="flex flex-wrap gap-2">
+          <Link className={`btn btn--primary ${btnSm}`} href="/control">
+            司会リモート
+          </Link>
+          <Link className={`btn ${btnSm}`} href="/admin/specials">
+            SSR設定
+          </Link>
+          <Link className={`btn ${btnSm}`} href="/live" target="_blank">
+            会場スクリーン ↗
+          </Link>
+        </div>
+      </section>
+
       <section className={sectionCls}>
         <div className="flex flex-wrap items-center gap-3">
           <button className={quietAction} onClick={handleUpdateStats} disabled={statsBusy}>

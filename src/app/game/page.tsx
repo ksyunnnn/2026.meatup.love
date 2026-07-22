@@ -3,7 +3,7 @@
 //  - 自分のQR（既存チケットQR /t/{uid} を流用）を相手に見せる
 //  - 相手のQRをスキャン、またはチケット下4桁を手入力 → 繋がり成立（両者+1P）
 //  - SR/SSR（ボーナス点をくれる人）を引くと専用演出。SR＝公表・SSR＝隠し（引くまで不明）
-//  - 自分の点数（ボーナス込み・最終集計と同じ計算）と名刺帳
+//  - 自分の点数（ボーナス込み・最終集計と同じ計算）と Mate（交換した相手の一覧）
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useMyAttendee } from '@/lib/use-my-attendee'
@@ -49,8 +49,8 @@ export default function GamePage() {
     return s
   }, [edges, myUid])
 
-  // Resolve specials for my partners (single-doc gets are allowed) so the 名刺帳
-  // keeps its SSR marks across reloads. Only fetches uids not yet known.
+  // Resolve specials for my partners (single-doc gets are allowed) so the Mate
+  // list keeps its rarity marks across reloads. Only fetches uids not yet known.
   useEffect(() => {
     const unknown = [...myPartnerUids].filter((u) => !(u in specialsSeen))
     if (unknown.length === 0) return
@@ -272,11 +272,8 @@ export default function GamePage() {
       )}
 
       <div className="w-full max-w-[440px]">
-        <p className="mb-2 flex flex-wrap items-baseline gap-x-2 text-[11px] font-bold uppercase tracking-widest text-meat">
-          名刺帳 ・ {partners.length}人と交換
-          <span className="normal-case tracking-normal text-ink-soft">
-SR・SSR＝多く点をくれる人
-          </span>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-meat">
+          Mate ・ {partners.length}人と交換
         </p>
         {partners.length === 0 ? (
           <p className="rounded-xl bg-cream px-3 py-4 text-center text-[13px] text-ink-soft">
@@ -391,6 +388,7 @@ function Card({ row, special }: { row: ShareRow; special: Special | null }) {
       <div className={'text-[12.5px] font-extrabold leading-tight ' + (isSp ? 'pr-6' : '')}>
         {row.name}
       </div>
+      {row.role && <div className="text-[10px] leading-tight text-ink-soft">{row.role}</div>}
       <div className="mt-0.5 flex items-baseline gap-1.5 text-[10px] tabular-nums text-ink-soft">
         {row.ticketNo && <span>No. {row.ticketNo.replace(/^MU-\d+-/, '')}</span>}
         {special && (

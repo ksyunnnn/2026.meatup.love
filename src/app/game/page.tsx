@@ -2,14 +2,14 @@
 // 参加者スマホ画面（繋がりレース・issue #11 / #13）
 //  - 自分のQR（既存チケットQR /t/{uid} を流用）を相手に見せる
 //  - 相手のQRをスキャン、またはチケット下4桁を手入力 → 繋がり成立（両者+1P）
-//  - SSR（ボーナス点をくれる人）を引くと専用演出。誰が SSR かは引くまで分からない
+//  - SR/SSR（ボーナス点をくれる人）を引くと専用演出。SR＝公表・SSR＝隠し（引くまで不明）
 //  - 自分の点数（ボーナス込み・最終集計と同じ計算）と名刺帳
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useMyAttendee } from '@/lib/use-my-attendee'
 import { useGameState } from '@/lib/use-game-state'
 import { displayRole, expectationChars } from '@/lib/ticket'
-import { finalScoreFrom, ticketNoFromCode, uidFromQrText } from '@/lib/game'
+import { finalScoreFrom, rarityOf, ticketNoFromCode, uidFromQrText, type Rarity } from '@/lib/game'
 import { createConnection, getSpecial, uidByTicketNo, type ShareRow } from '@/lib/connections'
 import { Loading, RetryNotice } from '@/components/load-state'
 import ExchangeTicket from '@/components/exchange-ticket'
@@ -21,7 +21,7 @@ const wrapCls =
 
 const EXP_EMOJI: Record<string, string> = { meat: '🍖', drink: '🍺', play: '🎧', connect: '🤝' }
 
-type Gain = { points: number; name: string; special: boolean }
+type Gain = { points: number; name: string; rarity: Rarity | null }
 
 export default function GamePage() {
   const { user, loading, attendee, loaded, error } = useMyAttendee()
@@ -37,6 +37,7 @@ export default function GamePage() {
 
   const myUid = user?.uid ?? ''
   const closed = control?.game === 'closed'
+  const gainLocked = !!gain?.rarity
 
   // uids I've already connected with (from the live edge set).
   const myPartnerUids = useMemo(() => {
@@ -67,9 +68,9 @@ export default function GamePage() {
     }
   }, [myPartnerUids, specialsSeen])
 
-  // My own SSR status, for the badge on my exchange ticket. Only a PUBLIC
-  // special is ever badged — that face is what the other person reads, so
-  // stamping a hidden special would give it away before they scan.
+  // My own rarity, for the stamp on my exchange ticket. Only a PUBLIC special
+  // (SR) is ever stamped — that face is what the other person reads, so
+  // stamping a hidden SSR would give it away before they scan.
   useEffect(() => {
     if (!myUid) return
     let active = true
@@ -88,7 +89,9 @@ export default function GamePage() {
 
   const connect = useCallback(
     async (otherUid: string) => {
-      if (!myUid || busy || closed) return
+      // An SSR overlay is waiting to be dismissed — the camera is still live
+      // behind it, and a stray frame must not replace the moment.
+      if (!myUid || busy || closed || gainLocked) return
       // debounce the same target (the camera fires every frame)
       const now = performance.now()
       if (now - (recent.current.get(otherUid) ?? 0) < 4000) return
@@ -106,8 +109,9 @@ export default function GamePage() {
           const name = shares.find((s) => s.uid === otherUid)?.name ?? 'ゲスト'
           // Same rule as the final tally (lib/game.finalScoreFrom): what you earn
           // depends only on who you met, so this never needs my own status.
-          setGain({ points: sp ? sp.bonusPoints : 1, name, special: !!sp })
-          setTimeout(() => setGain(null), 2400)
+          setGain({ points: sp ? sp.bonusPoints : 1, name, rarity: rarityOf(sp) })
+          // A rare pull stays up until it's dismissed; see GainOverlay.
+          if (!sp) setTimeout(() => setGain(null), 2400)
         }
       } catch {
         flash('うまくいきませんでした。もう一度')
@@ -115,7 +119,7 @@ export default function GamePage() {
         setBusy(false)
       }
     },
-    [myUid, busy, closed, shares],
+    [myUid, busy, closed, shares, gainLocked],
   )
 
   const onScan = useCallback(
@@ -234,7 +238,7 @@ export default function GamePage() {
                 chars={expectationChars(attendee.expectations)}
                 ticketNo={attendee.ticketNo ?? ''}
                 shareUrl={shareUrl}
-                ssr={mySpecial?.public ? 24 : undefined}
+                rarity={mySpecial?.public ? 'SR' : undefined}
               />
             </div>
           ) : (
@@ -271,7 +275,7 @@ export default function GamePage() {
         <p className="mb-2 flex flex-wrap items-baseline gap-x-2 text-[11px] font-bold uppercase tracking-widest text-meat">
           名刺帳 ・ {partners.length}人と交換
           <span className="normal-case tracking-normal text-ink-soft">
-            SSR＝多く点をくれる人
+SR・SSR＝多く点をくれる人
           </span>
         </p>
         {partners.length === 0 ? (
@@ -301,34 +305,66 @@ export default function GamePage() {
         </div>
       )}
 
-      {gain && <GainOverlay gain={gain} />}
+      {gain && <GainOverlay gain={gain} onClose={() => setGain(null)} />}
     </main>
   )
 }
 
-function GainOverlay({ gain }: { gain: Gain }) {
+/**
+ * The reward for a connection. A plain one clears itself after a beat — it
+ * happens dozens of times an evening and must not interrupt the next scan. A
+ * rare pull waits to be dismissed instead: it happens a handful of times all
+ * night, and it's the thing you turn your phone around to show someone.
+ */
+function GainOverlay({ gain, onClose }: { gain: Gain; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-2"
+      className="gain-veil fixed inset-0 z-50 flex flex-col items-center justify-center gap-2"
       style={{
-        background: gain.special
-          ? 'radial-gradient(120% 100% at 50% 40%, rgba(255,101,0,.22), rgba(255,247,239,.97))'
-          : 'radial-gradient(120% 100% at 50% 40%, rgba(179,61,68,.14), rgba(255,247,239,.97))',
+        // Opaque: the scanner panel behind is dark, and letting it show through
+        // put the mark on an accidental brown box.
+        background:
+          (gain.rarity
+            ? 'radial-gradient(120% 100% at 50% 40%, rgba(255,101,0,.22), rgba(255,247,239,0))'
+            : 'radial-gradient(120% 100% at 50% 40%, rgba(179,61,68,.14), rgba(255,247,239,0))') +
+          ', #fff7ef',
       }}
       aria-live="assertive"
       data-testid="gain"
+      onClick={onClose}
     >
-      {gain.special && (
-        <span className="rounded-pill bg-flame px-4 py-1 text-[22px] font-extrabold tracking-[0.12em] text-white">
-          SSR
+      {gain.rarity && (
+        <span
+          className="ssr-stamp ssr-press text-[54px] font-black leading-none"
+          data-testid="gain-rarity"
+        >
+          {gain.rarity}
         </span>
       )}
-      <span className="oniku-bounce text-[40px]">🍖</span>
-      <span className={'text-[32px] font-extrabold ' + (gain.special ? 'text-flame' : 'text-meat')}>
+      <span className="gain-rise oniku-bounce text-[40px]">🍖</span>
+      <span
+        className={
+          'gain-rise text-[32px] font-extrabold ' + (gain.rarity ? 'text-flame' : 'text-meat')
+        }
+      >
         +{gain.points}
         <span className="text-[16px]">P</span>
       </span>
-      <span className="text-[14px] font-bold text-ink">{gain.name} と繋がった</span>
+      {/* The greeting is the flavour; the person is the information — so the pun
+          sits as an eyebrow and the name carries the weight. */}
+      <span className="gain-rise text-[13.5px] font-bold tracking-wide text-ink-soft">
+        Nice meating you <span className="text-[16px]">🤝</span>
+      </span>
+      <span className="gain-rise -mt-1 text-[18px] font-extrabold text-ink">{gain.name}</span>
+      {gain.rarity && (
+        <button
+          className="btn btn--flame mt-5 min-h-11 px-8"
+          onClick={onClose}
+          data-testid="gain-close"
+        >
+          閉じる
+        </button>
+      )}
     </div>
   )
 }
@@ -349,7 +385,7 @@ function Card({ row, special }: { row: ShareRow; special: Special | null }) {
           aria-hidden
           className="ssr-stamp pointer-events-none absolute -right-0.5 -top-1 z-10 text-[14px] font-black leading-none"
         >
-          SSR
+          {rarityOf(special)}
         </span>
       )}
       <div className={'text-[12.5px] font-extrabold leading-tight ' + (isSp ? 'pr-6' : '')}>
@@ -359,7 +395,7 @@ function Card({ row, special }: { row: ShareRow; special: Special | null }) {
         {row.ticketNo && <span>No. {row.ticketNo.replace(/^MU-\d+-/, '')}</span>}
         {special && (
           <span className="font-extrabold text-flame">
-            <span className="sr-only">SSR ボーナス </span>+{special.bonusPoints}P
+            <span className="sr-only">{rarityOf(special)} ボーナス </span>+{special.bonusPoints}P
           </span>
         )}
       </div>

@@ -9,6 +9,7 @@
 // px on a typical phone and the card still scales to any container.
 import { qrDataUrl } from '@/lib/qr'
 import { EVENT } from '@/lib/event'
+import type { Rarity } from '@/lib/game'
 
 const q = (px: number) => `${(px / 3.6).toFixed(3)}cqw`
 
@@ -30,12 +31,11 @@ export interface ExchangeTicketProps {
   /** Show the date/venue footer. Off at the venue: everyone is already there. */
   showEventInfo?: boolean
   /**
-   * Mark this ticket SSR — the same corner stamp the 名刺帳 cards use. Pass it
-   * ONLY for public specials: this face is the one the other person reads, so
-   * stamping a hidden special would give the secret away before they scan.
-   * The number is the stamp's font size in design px (see `q`).
+   * Rarity stamp for the corner — the same mark the 名刺帳 cards use. Pass it
+   * ONLY for public specials (SR): this face is the one the other person reads,
+   * so stamping a hidden SSR would give the secret away before they scan.
    */
-  ssr?: number
+  rarity?: Rarity
 }
 
 export default function ExchangeTicket({
@@ -45,7 +45,7 @@ export default function ExchangeTicket({
   ticketNo,
   shareUrl,
   showEventInfo = false,
-  ssr,
+  rarity,
 }: ExchangeTicketProps) {
   const qr = qrDataUrl(shareUrl, { light: C.cream })
   const code = ticketNo.replace(/^MU-\d+-/, '')
@@ -58,7 +58,7 @@ export default function ExchangeTicket({
     >
       {/* The corner stamp lives outside the card so the card's overflow:hidden
           (which clips the watermark) doesn't clip its overhang. */}
-      {ssr && (
+      {rarity && (
         <span
           aria-hidden
           className="ssr-stamp"
@@ -68,12 +68,12 @@ export default function ExchangeTicket({
             top: q(-11),
             zIndex: 10,
             pointerEvents: 'none',
-            fontSize: q(ssr),
+            fontSize: q(24),
             fontWeight: 900,
             lineHeight: 1,
           }}
         >
-          SSR
+          {rarity}
         </span>
       )}
       <div
@@ -147,7 +147,7 @@ export default function ExchangeTicket({
                 2026
               </span>
             </div>
-            {/* GUEST stays on an SSR ticket: the pill states the ticket class,
+            {/* GUEST stays on a stamped ticket: the pill states the ticket class,
                 the stamp states rarity — different facts, both true. */}
             <div
               style={{

@@ -4,6 +4,7 @@ import {
   edgeEndpoints,
   scoreFrom,
   finalScoreFrom,
+  rarityOf,
   rankFrom,
   ticketNoFromCode,
   uidFromQrText,
@@ -70,6 +71,19 @@ describe('finalScoreFrom (reveal = count + bonuses)', () => {
       bonus,
     )
     expect(s.get('n1')).toBe(16)
+  })
+})
+
+describe('rarityOf', () => {
+  it('a public special is SR — the room already knows where those points are', () => {
+    expect(rarityOf({ public: true })).toBe('SR')
+  })
+  it('a hidden special is SSR — you can only find it by scanning', () => {
+    expect(rarityOf({ public: false })).toBe('SSR')
+  })
+  it('an ordinary guest has no rarity', () => {
+    expect(rarityOf(null)).toBeNull()
+    expect(rarityOf(undefined)).toBeNull()
   })
 })
 

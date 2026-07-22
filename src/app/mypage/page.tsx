@@ -159,6 +159,27 @@ export default function MyPage() {
         チケットを見る 🎟
       </Link>
 
+      {/* 当日の会場ゲームへの入口。参加確定者に常時見せる（開催前でも「何をやるか」が
+          伝わる説明つき）。会場スクリーン(/live)への軽い覗き見リンクも併設。 */}
+      {confirmed && (
+        <section className="w-full max-w-[540px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
+          <h2 className="text-[16px] font-extrabold">Meat &amp; Greet 🍖</h2>
+          <p className="mx-auto mt-2 max-w-[360px] text-[13px] leading-relaxed text-ink-soft">
+            当日、会場で名刺を交換してポイントを集めるゲーム。
+            となりの人とQRを見せ合って繋がろう。
+          </p>
+          <Link className="btn btn--primary btn--block mx-auto mt-4 max-w-[280px]" href="/game">
+            ゲームを開く
+          </Link>
+          <Link
+            href="/live"
+            className="mt-3 inline-flex items-center gap-1 text-[13px] font-bold text-ink-soft underline-offset-2 hover:text-meat hover:underline"
+          >
+            会場スクリーンを見る ↗
+          </Link>
+        </section>
+      )}
+
       <section className="w-full max-w-[540px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
         <h2 className="text-[16px] font-extrabold">日時・場所</h2>
         <p className="mt-3 font-[family-name:var(--font-display)] text-[18px] tracking-[0.04em]">

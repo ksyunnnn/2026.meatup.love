@@ -89,7 +89,9 @@ export default function ControlPage() {
           <button
             className={quietBtn}
             disabled={busy !== null}
-            onClick={() => run('open', () => patchControl({ game: 'open' }))}
+            // reveal も 0 に戻す。戻さないとプロジェクターに表彰台が出たまま
+            // 再開することになり、「開催に戻す」を押した人の期待と食い違う。
+            onClick={() => run('open', () => patchControl({ game: 'open', reveal: 0 }))}
           >
             {busy === 'open' ? '戻しています…' : '開催に戻す'}
           </button>
@@ -164,7 +166,14 @@ export default function ControlPage() {
             className="min-h-11 flex-1 rounded-xl px-4 text-[13.5px] font-extrabold text-white disabled:opacity-40"
             style={{ background: '#ff6500' }}
             disabled={busy !== null || open}
-            onClick={() => run('reveal', () => patchControl({ reveal: reveal + 1 }))}
+            // 毎回集計し直してから出す。締めるときの集計が電波不良で落ちても、
+            // このボタンを押せば直る（空の表彰台のまま詰まない）。集計は冪等。
+            onClick={() =>
+              run('reveal', async () => {
+                await computeAndWriteResults()
+                await patchControl({ reveal: reveal + 1 })
+              })
+            }
           >
             {revealing ? '▶ もう一度' : '▶ 結果を出す'}
           </button>

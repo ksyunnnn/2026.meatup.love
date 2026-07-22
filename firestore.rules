@@ -164,6 +164,74 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ========================================================================
+    // 会場交流ポイントゲーム「繋がりレース」（see issue #11 for the full spec）
+    // ========================================================================
+
+    // connections/{pairId} : one undirected edge per pair of guests. pairId is
+    // the two uids sorted and joined with '__' (see lib/game.connectionId), so a
+    // pair can exist at most once — a repeat write lands as an UPDATE (there is
+    // no update rule) and is denied. That is how "1ペア1回" (no point farming)
+    // is enforced in the rules layer, not just the UI. World-readable: the
+    // projector draws the live graph unauthenticated, and the live score is the
+    // connection COUNT only — it never reveals who is a hidden special. An edge
+    // is created by ONE of its two participants, recorded as themselves (`by`).
+    match /connections/{pairId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.a is string
+        && request.resource.data.b is string
+        && request.resource.data.a < request.resource.data.b
+        && pairId == request.resource.data.a + '__' + request.resource.data.b
+        && (request.auth.uid == request.resource.data.a
+            || request.auth.uid == request.resource.data.b)
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.edition is string
+        && request.resource.data.createdAt is timestamp;
+      // No update path (dedup, above). Admin deletes when removing a guest.
+      allow delete: if isAdmin();
+    }
+
+    // specials/{uid} : which guests award bonus points, and how many.
+    // `public:true` = staff (glows on the projector); `public:false` = a hidden
+    // special that looks like any normal node. A single-doc get() is open to
+    // signed-in users so a scanner can resolve a partner they physically met
+    // (the ✨ reveal on their own phone); list() is admin-only so nobody can
+    // enumerate the hidden specials (accidental exposure is impossible; a
+    // deliberate per-uid probe is out of scope under the game's 性善説 model).
+    match /specials/{uid} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // control/{edition} : live game + projector display state, driven by the
+    // host from /control (game: open|closed, ranking: shown|mosaic, reveal:
+    // bump-to-replay). World-readable — the projector listens and phones read it
+    // to know when scanning has closed. Admin-only write.
+    match /control/{edition} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // results/{edition} : the final ranking (connection count + special
+    // bonuses) computed once by an admin at close and shown on the reveal.
+    // Bonuses are applied ONLY here, so hidden specials stay secret during play
+    // and produce the end-of-game reshuffle. Public read; admin-only write.
+    match /results/{edition} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // staff/{edition} : the PUBLIC staff uid list, so the projector (/live) can
+    // glow staff nodes without reading the admin-only `specials` collection —
+    // that keeps /live a login-free, view-only screen. Only PUBLIC specials go
+    // here; hidden specials are NEVER listed (secrecy). Admin-only write.
+    match /staff/{edition} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /admins/{uid} {
       // Single-doc read is open to any signed-in user: registration via an
       // invite must check whether the issuer is a host (admins/{issuedBy}), and

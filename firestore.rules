@@ -193,15 +193,26 @@ service cloud.firestore {
     }
 
     // specials/{uid} : which guests award bonus points, and how many.
-    // `public:true` = staff (glows on the projector); `public:false` = a hidden
-    // special that looks like any normal node. A single-doc get() is open to
-    // signed-in users so a scanner can resolve a partner they physically met
-    // (the ✨ reveal on their own phone); list() is admin-only so nobody can
-    // enumerate the hidden specials (accidental exposure is impossible; a
-    // deliberate per-uid probe is out of scope under the game's 性善説 model).
+    // `public:true` = SR (announced; glows on the projector); `public:false` =
+    // SSR (hidden; looks like any normal node until someone scans it).
+    //
+    // BOTH get and list are open to signed-in users, and that is a deliberate
+    // trade, not an oversight. The projector (/live) ranks by bonus-inclusive
+    // points, and this site is a static export with no server: the only place a
+    // score can be computed is the viewer's browser, so every viewer must hold
+    // the bonus table. /live is reachable by guests (linked from /mypage and
+    // /game), therefore guests hold it too — a signed-in guest can list this
+    // collection from the console and read the hidden SSRs by name.
+    //
+    // Accepted because the game is a party icebreaker under the 性善説 model of
+    // Issue#11 (no anti-cheat anywhere), and because guests attend on phones,
+    // where opening devtools is not a realistic path. The alternative designs
+    // (publishing a precomputed score table instead, or restricting /live to
+    // hosts) were rejected: the first freezes guests' screens whenever no host
+    // has /live open, the second takes the projector view away from guests.
     match /specials/{uid} {
       allow get: if isSignedIn();
-      allow list: if isAdmin();
+      allow list: if isSignedIn();
       allow write: if isAdmin();
     }
 

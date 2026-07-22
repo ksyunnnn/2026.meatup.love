@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   connectionId,
   edgeEndpoints,
-  scoreFrom,
   finalScoreFrom,
   rarityOf,
   rankFrom,
@@ -22,25 +21,20 @@ describe('connectionId (pair identity / dedup)', () => {
   })
 })
 
-describe('scoreFrom (live = connection count)', () => {
-  it('counts degree: each edge is +1 for both ends', () => {
-    const s = scoreFrom([
-      { a: 'u1', b: 'u2' },
-      { a: 'u1', b: 'u3' },
-    ])
+describe('finalScoreFrom (the score everywhere: /live, /game, the reveal)', () => {
+  it('with no rares at all, it is the plain connection count', () => {
+    const s = finalScoreFrom(
+      [
+        { a: 'u1', b: 'u2' },
+        { a: 'u1', b: 'u3' },
+      ],
+      new Map(),
+    )
     expect(s.get('u1')).toBe(2)
     expect(s.get('u2')).toBe(1)
     expect(s.get('u3')).toBe(1)
   })
-  it('never differs by partner — a hidden special still moves a score by 1', () => {
-    // scoreFrom takes no specials input at all, so it cannot leak specialness.
-    const s = scoreFrom([{ a: 'normal', b: 'hiddenSpecial' }])
-    expect(s.get('normal')).toBe(1)
-    expect(s.get('hiddenSpecial')).toBe(1)
-  })
-})
 
-describe('finalScoreFrom (reveal = count + bonuses)', () => {
   const bonus = new Map<string, number>([
     ['staffA', 5],
     ['staffB', 10],

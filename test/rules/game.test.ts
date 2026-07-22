@@ -118,11 +118,17 @@ describe('specials (hidden-special secrecy)', () => {
     await assertFails(getDoc(doc(anon, 'specials/staffA')))
   })
 
-  it('listing specials is admin-only — nobody can enumerate the hidden specials', async () => {
+  // A signed-in guest CAN enumerate the rares, hidden ones included. That is
+  // deliberate: /live ranks by bonus-inclusive points and there is no server to
+  // compute on, so every viewer's browser needs the bonus table. Signing in is
+  // still required — an anonymous visitor gets nothing.
+  it('any signed-in user may list specials; an anonymous one may not', async () => {
     const u1 = testEnv.authenticatedContext('u1').firestore()
-    await assertFails(getDocs(collection(u1, 'specials')))
+    await assertSucceeds(getDocs(collection(u1, 'specials')))
     const admin = testEnv.authenticatedContext('admin1').firestore()
     await assertSucceeds(getDocs(collection(admin, 'specials')))
+    const anon = testEnv.unauthenticatedContext().firestore()
+    await assertFails(getDocs(collection(anon, 'specials')))
   })
 
   it('only an admin may set a special (bonusPoints/public)', async () => {

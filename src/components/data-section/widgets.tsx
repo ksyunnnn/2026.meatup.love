@@ -8,6 +8,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from 'react'
@@ -15,6 +16,26 @@ import NumberFlow from '@number-flow/react'
 import { GENDER, JOBS, EXPECTATIONS, CUMULATIVE, TOTAL, maleRatio, type Slice } from './data'
 
 // ── hooks ──────────────────────────────────────────────────────────────────
+
+/** クライアントで描画中かどうか。サーバ側は false を返すので、初期HTMLと最初の
+ *  クライアント描画が一致し、ハイドレーション不一致が起きない。effect 内で
+ *  setState する定番パターンの代わり（cascading render を避ける）。 */
+const noopSubscribe = () => () => {}
+export function useMounted(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  )
+}
+
+/** マウント後に一度だけ確定する現在時刻。getSnapshot は安定値を返す必要があるため
+ *  （毎回 Date.now() を返すと無限ループになる）、初回呼び出しで固定する。 */
+let clientNowMs = 0
+export function clientNow(): number {
+  if (clientNowMs === 0) clientNowMs = Date.now()
+  return clientNowMs
+}
 
 /** 要素が一度視界に入ったら true（演出トリガー）。 */
 export function useInView<T extends Element>(threshold = 0.35) {
@@ -152,17 +173,15 @@ export function CountUp({
   const { ref, inView } = useInView<HTMLSpanElement>(0.5)
   // NumberFlow はクライアント計測で属性が決まる→ SSR と差が出てハイドレーション
   // 不一致になる。マウント後にだけ描画し、初期描画は素の数字に揃える。
-  const [mounted, setMounted] = useState(false)
-  const [v, setV] = useState(0)
-  useEffect(() => setMounted(true), [])
+  const mounted = useMounted()
+  // 視界に入るまで 0、入ったら value（useInView は一度 true になったら戻らない）。
+  // 状態を持たず導出するだけなので、effect からの setState は要らない。
+  const v = inView ? value : 0
   useEffect(() => {
-    if (!inView) return
-    setV(value)
-    if (confettiOnArrive) {
-      const t = setTimeout(fireConfetti, 650)
-      return () => clearTimeout(t)
-    }
-  }, [inView, value, confettiOnArrive])
+    if (!inView || !confettiOnArrive) return
+    const t = setTimeout(fireConfetti, 650)
+    return () => clearTimeout(t)
+  }, [inView, confettiOnArrive])
   return (
     <span ref={ref} className={className}>
       {mounted ? <NumberFlow value={v} /> : 0}

@@ -6,6 +6,11 @@
 import { useEffect, useRef, useState } from 'react'
 import jsQR from 'jsqr'
 
+/** Longest edge fed to jsQR, in px. */
+const SCAN_MAX_PX = 480
+/** ~8 decodes a second. Faster than a person can present a code. */
+const SCAN_INTERVAL_MS = 120
+
 export default function QrScanner({
   active,
   onResult,
@@ -30,18 +35,31 @@ export default function QrScanner({
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
 
+    // Decode a DOWNSCALED frame, and only a few times a second. A phone camera
+    // hands us 1280x720 or larger; scanning that every animation frame pegs the
+    // CPU, heats the phone and makes the preview stutter — over a whole evening
+    // that is the difference between "it just works" and "my phone is hot and
+    // the camera lags". A QR held up to the frame reads fine at this size.
+    let lastScan = 0
     const tick = () => {
       if (stopped) return
-      const v = videoRef.current
-      if (v && ctx && v.readyState >= v.HAVE_ENOUGH_DATA) {
-        canvas.width = v.videoWidth
-        canvas.height = v.videoHeight
-        ctx.drawImage(v, 0, 0, canvas.width, canvas.height)
-        const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
-        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' })
-        if (code?.data) onResultRef.current(code.data)
-      }
       raf = requestAnimationFrame(tick)
+      const v = videoRef.current
+      if (!v || !ctx || v.readyState < v.HAVE_ENOUGH_DATA) return
+      const now = performance.now()
+      if (now - lastScan < SCAN_INTERVAL_MS) return
+      lastScan = now
+      const k = Math.min(1, SCAN_MAX_PX / Math.max(v.videoWidth, v.videoHeight))
+      const w = Math.max(1, Math.round(v.videoWidth * k))
+      const h = Math.max(1, Math.round(v.videoHeight * k))
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w
+        canvas.height = h
+      }
+      ctx.drawImage(v, 0, 0, w, h)
+      const img = ctx.getImageData(0, 0, w, h)
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' })
+      if (code?.data) onResultRef.current(code.data)
     }
 
     ;(async () => {
@@ -53,6 +71,7 @@ export default function QrScanner({
         if (!v) return
         v.srcObject = stream
         await v.play()
+        setError(null) // recovered — e.g. permission granted on a later attempt
         raf = requestAnimationFrame(tick)
       } catch {
         setError('カメラを使えません。下の番号入力でつなげます。')
@@ -66,13 +85,20 @@ export default function QrScanner({
     }
   }, [active])
 
-  if (error) {
-    return <p className="rounded-xl bg-cream px-3 py-2 text-center text-[13px] text-ink-soft">{error}</p>
-  }
+  // The <video> stays mounted even while the error is showing. Unmounting it
+  // would drop the ref, so a retry (tab away and back, or granting permission
+  // late) could never attach a stream — the camera would stay dead for the rest
+  // of the evening after one denial.
   return (
     <div className="relative aspect-square w-full max-w-[260px] overflow-hidden rounded-2xl border border-line bg-black">
       <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
-      <div className="pointer-events-none absolute inset-6 rounded-xl border-2 border-white/80" />
+      {error ? (
+        <p className="absolute inset-0 flex items-center justify-center bg-cream px-4 text-center text-[13px] leading-relaxed text-ink-soft">
+          {error}
+        </p>
+      ) : (
+        <div className="pointer-events-none absolute inset-6 rounded-xl border-2 border-white/80" />
+      )}
     </div>
   )
 }

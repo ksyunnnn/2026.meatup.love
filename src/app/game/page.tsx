@@ -88,13 +88,15 @@ export default function GamePage() {
   }
 
   const connect = useCallback(
-    async (otherUid: string) => {
+    // `typed` = came from the hand-entered code, not the camera. The camera
+    // fires many times a second and must be debounced; a person tapping つなぐ
+    // must never be silently ignored, so the debounce is skipped for them.
+    async (otherUid: string, typed = false) => {
       // An SSR overlay is waiting to be dismissed — the camera is still live
       // behind it, and a stray frame must not replace the moment.
       if (!myUid || busy || closed || gainLocked) return
-      // debounce the same target (the camera fires every frame)
       const now = performance.now()
-      if (now - (recent.current.get(otherUid) ?? 0) < 4000) return
+      if (!typed && now - (recent.current.get(otherUid) ?? 0) < 4000) return
       recent.current.set(otherUid, now)
       setBusy(true)
       try {
@@ -136,7 +138,7 @@ export default function GamePage() {
     const uid = await uidByTicketNo(full)
     if (!uid) return flash('その番号の人が見つかりません')
     setCode('')
-    void connect(uid)
+    void connect(uid, true)
   }
 
   if (error && !loaded) return <RetryNotice className={wrapCls} />

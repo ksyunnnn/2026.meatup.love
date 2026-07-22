@@ -5,7 +5,7 @@
 // データは公開 stats を購読（useStats）。未作成時は現時点のスナップショットにフォールバック。
 // 紙吹雪（クラッカー）は無し。
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useStats } from '@/lib/stats'
 import {
   TOTAL,
@@ -13,7 +13,7 @@ import {
   EXPECTATIONS,
   JOB_WORDS,
 } from './data'
-import { CountUp, GenderDonut } from './widgets'
+import { CountUp, GenderDonut, clientNow, useMounted } from './widgets'
 import { RippleField, JobTags } from './themes'
 import { BeerMug } from './beer-mug'
 
@@ -54,16 +54,13 @@ export function DataSection() {
     : EXPECTATIONS
 
   // 開催までの割合は当日の値なので、ハイドレーション差を避けてマウント後に算出。
-  const [beerPct, setBeerPct] = useState(0)
-  const [dayOf, setDayOf] = useState(false)
-  const [daysLeft, setDaysLeft] = useState<number | null>(null)
-  useEffect(() => {
-    const now = Date.now()
-    // 3日前(FULL)で100%到達、それ以降は100%キープ。当日の120%は dayOf 側で表現。
-    setBeerPct(Math.max(0, Math.min(1, (now - START_MS) / (FULL_MS - START_MS))))
-    setDayOf(now >= EVENT_DAY_MS)
-    setDaysLeft(Math.max(0, Math.ceil((EVENT_MS - now) / 86_400_000)))
-  }, [])
+  // 状態には持たず描画時に導出する（effect からの setState は cascading render）。
+  const mounted = useMounted()
+  const now = mounted ? clientNow() : 0
+  // 3日前(FULL)で100%到達、それ以降は100%キープ。当日の120%は dayOf 側で表現。
+  const beerPct = mounted ? Math.max(0, Math.min(1, (now - START_MS) / (FULL_MS - START_MS))) : 0
+  const dayOf = mounted && now >= EVENT_DAY_MS
+  const daysLeft = mounted ? Math.max(0, Math.ceil((EVENT_MS - now) / 86_400_000)) : null
 
   return (
     <section className="w-full max-w-[440px] px-5 py-16 text-center">

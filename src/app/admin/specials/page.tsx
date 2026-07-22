@@ -1,7 +1,8 @@
 'use client'
-// SSR 設定（Meat & Greet・issue #11 / E）。運営が当日設定。
-// 「SSR」＝一般参加者から選ぶ高得点の人。public:true = 公表（/live で発光）／
-// public:false = 隠す（見た目は通常のまま、繋がった相手にだけ分かる）。
+// SR / SSR 設定（Meat & Greet・issue #11 / E）。運営が当日設定。
+// 高得点の人。public:true = SR（公表・/live で発光）／
+// public:false = SSR（隠し。見た目は通常のまま、繋がった相手にだけ分かる）。
+// 隠しのほうが上位レアなのは「狙って当てにいけない」ため。
 //  - bonusPoints = 通常ユーザーがその人と繋がって得る点（個別）
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -68,15 +69,15 @@ export default function SpecialsAdminPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[560px] flex-col gap-4 px-4 py-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-[17px] font-extrabold">SSR設定</h1>
+        <h1 className="text-[17px] font-extrabold">SR / SSR 設定</h1>
         <Link className="text-[12px] font-bold text-ink-soft hover:underline" href="/admin">
           ← 管理
         </Link>
       </header>
       <p className="rounded-xl bg-cream px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
-        SSR に会った人は、1点ではなくその人のボーナス点をもらえます。点は一人ずつ決められます。
-        <b className="text-flame">公表</b>にすると会場スクリーンで光り、<b className="text-ink">隠す</b>と
-        ふつうの参加者と同じ見た目のまま、繋がった相手にだけ SSR だと分かります。
+この人に会った人は、1点ではなくその人のボーナス点をもらえます。点は一人ずつ決められます。
+        <b className="text-flame">SR（公表）</b>は会場スクリーンで光り、誰が高得点か全員に分かります。
+        <b className="text-ink">SSR（隠し）</b>はふつうの参加者と同じ見た目のまま、繋がった相手にだけ分かる当たりです。
         <br />
         選ぶとすぐ保存されます。設定中：<b className="text-meat tabular-nums">{specials.size}</b> 人
       </p>
@@ -128,12 +129,12 @@ type Mode = 'none' | 'hidden' | 'staff'
 // scanning for. (HIG: prominence should track importance.)
 const MODES: { value: Mode; label: string; selected: string }[] = [
   { value: 'none', label: 'なし', selected: 'bg-line text-ink' },
-  { value: 'hidden', label: 'SSR・隠す', selected: 'bg-ink text-white' },
-  { value: 'staff', label: 'SSR・公表', selected: 'bg-flame text-white' },
+  { value: 'hidden', label: 'SSR・隠し', selected: 'bg-ink text-white' },
+  { value: 'staff', label: 'SR・公表', selected: 'bg-flame text-white' },
 ]
 
 /**
- * One guest's setting. The three real states (なし / SSR・隠す / SSR・公表) are
+ * One guest's setting. The three real states (なし / SSR・隠し / SR・公表) are
  * mutually exclusive, so they're one radio group rather than a two-way toggle
  * plus a separate remove button — and every control reads its value straight
  * from the saved doc, so the row can never show something that isn't stored.

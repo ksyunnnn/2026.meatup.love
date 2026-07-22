@@ -23,6 +23,16 @@ export interface Edge {
   b: string
 }
 
+/** Rarity label shown to players. The public specials are announced, so the room
+ *  already knows where those points are — that's SR. A hidden special is the one
+ *  you can only find by scanning, so it takes the top rarity: SSR. */
+export type Rarity = 'SR' | 'SSR'
+
+export function rarityOf(special: { public: boolean } | null | undefined): Rarity | null {
+  if (!special) return null
+  return special.public ? 'SR' : 'SSR'
+}
+
 /** Live score = connection COUNT: each edge is +1 for both of its ends. Computed
  *  from the public `connections` alone, so it never reads `specials` and can't
  *  leak who is a hidden special (a connection always moves a score by exactly 1,

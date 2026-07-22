@@ -150,11 +150,12 @@ export interface ResultEntry {
   score: number
 }
 
-/** Admin-only, run once at close: read every edge + special, apply the bonuses
- *  (the ONLY place they count — keeps hidden specials secret until now), and
- *  write the prize ranking. Public staff (public:true) are excluded from the
- *  prize list per the agreed rule (option B: 賑やかし役, not prize-eligible);
- *  hidden specials are ordinary guests and stay eligible. */
+/** Admin-only, run once at close: read every edge + rare, and FREEZE the
+ *  standing into `results` so the prize list can't move while it's being read
+ *  out. The same bonuses are already live on /live and /game, so this changes
+ *  no number — it only pins one. SR (public:true) are excluded from the prize
+ *  list per the agreed rule (賑やかし役, not prize-eligible); SSR are ordinary
+ *  guests picked at random and stay eligible. */
 export async function computeAndWriteResults(topN = 10): Promise<ResultEntry[]> {
   const [connSnap, specials, sharesSnap] = await Promise.all([
     getDocs(collection(db, 'connections')),
@@ -185,10 +186,10 @@ export function subscribeResults(cb: (top: ResultEntry[] | null) => void): () =>
   })
 }
 
-// ---- public staff list (so /live can glow staff without admin) ----
+// ---- public SR list (so /live can glow them without being admin) ----
 
-/** Public subscription to the staff uid set. World-readable, so /live needs no
- *  login. Holds ONLY public staff — hidden specials are never listed here. */
+/** Subscription to the SR uid set. Holds ONLY the public rares — an SSR is
+ *  never listed here, which is what keeps the two apart on the graph. */
 export function subscribeStaff(cb: (uids: Set<string>) => void): () => void {
   return onSnapshot(doc(db, 'staff', EDITION), (snap) => {
     const uids = snap.exists() ? ((snap.data() as { uids?: string[] }).uids ?? []) : []

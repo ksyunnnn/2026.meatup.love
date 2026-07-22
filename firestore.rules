@@ -234,10 +234,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // staff/{edition} : the PUBLIC staff uid list, so the projector (/live) can
-    // glow staff nodes without reading the admin-only `specials` collection —
-    // that keeps /live a login-free, view-only screen. Only PUBLIC specials go
-    // here; hidden specials are NEVER listed (secrecy). Admin-only write.
+    // staff/{edition} : the uid list of the PUBLIC rares (SR), so the projector
+    // (/live) can glow them. Only SR goes here; a hidden SSR is never listed,
+    // which is what keeps the two visually distinct on the graph. Admin-only
+    // write, kept in sync by /admin/specials whenever a rare changes.
     match /staff/{edition} {
       allow read: if true;
       allow write: if isAdmin();

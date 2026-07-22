@@ -31,7 +31,7 @@ export interface ExchangeTicketProps {
   /** Show the date/venue footer. Off at the venue: everyone is already there. */
   showEventInfo?: boolean
   /**
-   * Rarity stamp for the corner — the same mark the 名刺帳 cards use. Pass it
+   * Rarity stamp for the corner — the same mark the Mate cards use. Pass it
    * ONLY for public specials (SR): this face is the one the other person reads,
    * so stamping a hidden SSR would give the secret away before they scan.
    */

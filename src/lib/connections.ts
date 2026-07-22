@@ -42,7 +42,7 @@ export async function createConnection(me: string, other: string): Promise<Creat
 }
 
 /** Live subscription to every edge (world-readable). Powers the graph, the
- *  count-based ranking, and each guest's own score/名刺帳. */
+ *  count-based ranking, and each guest's own score and Mate list. */
 export function subscribeConnections(cb: (edges: Connection[]) => void): () => void {
   return onSnapshot(collection(db, 'connections'), (snap) => {
     cb(snap.docs.map((d) => d.data() as Connection))
@@ -115,7 +115,7 @@ export async function patchControl(patch: Partial<GameControl>): Promise<void> {
 
 // ---- shares (participant roster for the graph) ----
 
-/** Minimal public row from `shares` — the projector's node set and名刺帳 cards. */
+/** Minimal public row from `shares` — the projector's node set and the Mate cards. */
 export interface ShareRow {
   uid: string
   name: string

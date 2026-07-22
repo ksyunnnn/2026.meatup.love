@@ -34,6 +34,37 @@ export interface Attendee {
   cancelledFrom?: AttendeeStatus
 }
 
+// ---- 会場交流ポイントゲーム「繋がりレース」(see issue #11) ----
+
+/** One undirected edge in the connection game. Document id == connectionId(a,b)
+ *  (the two uids sorted + joined), so a pair is a single doc and can't repeat. */
+export interface Connection {
+  a: string // the lexicographically smaller of the two uids
+  b: string // the larger uid
+  by: string // uid of the participant who scanned (created) the edge
+  edition: string
+  createdAt: Timestamp
+}
+
+/** Marks a guest who awards bonus points when a normal guest connects to them.
+ *  Document id == the guest's uid. Set by the host from /admin. */
+export interface Special {
+  bonusPoints: number // points the normal scanner earns from this connection
+  public: boolean // true = staff (glows on the projector); false = hidden special
+  name?: string // optional label for the host's admin list (never shown publicly)
+  edition: string
+}
+
+/** Live game + projector display state. Document id == edition. Host-controlled
+ *  from /control; the projector and phones read it. */
+export interface GameControl {
+  game: 'open' | 'closed' // closed freezes scanning and the ranking
+  ranking: 'shown' | 'mosaic' // mosaic hides the standings while the graph grows
+  reveal: number // bump this to (re)play the results animation on the projector
+  edition: string
+  updatedAt: Timestamp
+}
+
 /** An invite the host issues. Firestore document id == the unguessable token. */
 export interface Invite {
   name?: string // prefill name for the greeting/form

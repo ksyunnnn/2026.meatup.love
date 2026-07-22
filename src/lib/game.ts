@@ -33,24 +33,15 @@ export function rarityOf(special: { public: boolean } | null | undefined): Rarit
   return special.public ? 'SR' : 'SSR'
 }
 
-/** Live score = connection COUNT: each edge is +1 for both of its ends. Computed
- *  from the public `connections` alone, so it never reads `specials` and can't
- *  leak who is a hidden special (a connection always moves a score by exactly 1,
- *  whoever it is with). This is what the live ranking and node sizes use. */
-export function scoreFrom(edges: Edge[]): Map<string, number> {
-  const m = new Map<string, number>()
-  for (const e of edges) {
-    m.set(e.a, (m.get(e.a) ?? 0) + 1)
-    m.set(e.b, (m.get(e.b) ?? 0) + 1)
-  }
-  return m
-}
-
-/** Final score = count + special bonuses, applied ONLY at the reveal. What each
- *  end earns depends solely on WHO THEY MET: a special partner pays their own
- *  `bonusPoints`, anyone else pays the base 1. Your own status never changes
- *  what you earn, so two specials meeting each pay the other their bonus.
- *  `bonus` holds only the specials (uid → bonusPoints). */
+/** The score, everywhere: the live ranking on /live, each guest's own number on
+ *  /game, and the standing frozen at the reveal all run through this, so they
+ *  can never disagree. What each end earns depends solely on WHO THEY MET: an
+ *  SR/SSR partner pays their own `bonusPoints`, anyone else pays the base 1.
+ *  Your own status never changes what you earn, so two rares meeting each pay
+ *  the other their bonus. `bonus` holds only the rares (uid → bonusPoints).
+ *
+ *  Because bonuses are live, a big jump reveals that someone just met an SSR.
+ *  That is accepted — see the `specials` block in firestore.rules. */
 export function finalScoreFrom(edges: Edge[], bonus: Map<string, number>): Map<string, number> {
   const m = new Map<string, number>()
   const add = (uid: string, n: number) => m.set(uid, (m.get(uid) ?? 0) + n)

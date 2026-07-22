@@ -1,9 +1,11 @@
 'use client'
-// プロジェクター表示（繋がりレース・issue #11 / #14）。**閲覧専用で公開**（ログイン不要）。
-//  - 主役＝ソーシャルグラフ（育つ・公表スタッフは発光）／ランキング／結果発表
+// プロジェクター表示（Meat & Greet・issue #11 / #14）。**閲覧はログイン必須**
+// （admin までは不要。参加者も /mypage・/game のリンクから開ける）。
+//  - 主役＝ソーシャルグラフ（育つ・SR は発光）／ランキング／結果発表
 //  - レイアウトは 1600×900 の固定ステージ。画面幅に合わせて丸ごと縮小フィット
 //    （レターボックス）＝プロジェクターでもスマホでも「配置は完全に同じ」。
-//  - 公開データのみで動くので秘匿維持（公表スタッフ list と締め後 results だけ公開）。
+//  - ランキングはボーナス込みのポイント。点の跳ね方から SSR を推測できるが、
+//    それは許容した設計（理由は firestore.rules の specials ブロック）。
 //  - フェイルセーフ（L/R・ローカル操作）は admin のときだけ。ランキング表示/非表示は
 //    誰でも（自分の画面だけ・モザイクは解除できない）。
 import { useCallback, useEffect, useState } from 'react'
@@ -127,13 +129,14 @@ export default function LivePage() {
             className="absolute right-6 top-6 w-[380px] rounded-2xl p-4"
             style={{ background: 'rgba(20,12,13,.62)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,220,190,.1)' }}
           >
-            {/* Counts, not points — the bonus stays out of the public ranking so
-                a hidden special isn't given away by a +5 jump. Labelled so it
-                isn't mistaken for the点数 each guest sees on their own phone. */}
+            {/* Bonus-inclusive points — the same number each guest sees on their
+                own phone, so this board IS the standing rather than a proxy for
+                it. A hidden SSR can therefore be inferred from a big jump; that
+                is accepted (see the `specials` block in firestore.rules). */}
             <h3 className="mb-3 flex items-baseline gap-2 text-[18px] font-extrabold" style={{ color: '#ffd9b0' }}>
-              🏆 つながりの多い人
+              🏆 ポイントランキング
               <span className="text-[12px] font-bold" style={{ color: '#c9b3a5' }}>
-                ボーナスは発表で
+                ボーナス込み
               </span>
             </h3>
             <div className="relative">

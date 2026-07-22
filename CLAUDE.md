@@ -45,4 +45,5 @@
 ## ドキュメント
 - `docs/STATUS.md` 本番の現状・引き継ぎ / `DEPLOY.md` 再デプロイ・再構築 runbook
 - `docs/SPEC.md` 仕様ロードマップ / `DESIGN.md` 意匠・OGP設計（出典付き） / `PRINCIPLES.md` 内部品質原則の固定
+- `docs/GAME.md` 会場交流ゲーム Meat & Greet の実装仕様（採点規則・データモデル・当日の運営手順）
 - ※ 毎セッションには読み込まない（必要時に参照）

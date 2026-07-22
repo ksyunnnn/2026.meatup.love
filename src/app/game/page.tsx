@@ -8,10 +8,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useMyAttendee } from '@/lib/use-my-attendee'
 import { useGameState } from '@/lib/use-game-state'
-import { qrDataUrl } from '@/lib/qr'
+import { displayRole, expectationChars } from '@/lib/ticket'
 import { finalScoreFrom, ticketNoFromCode, uidFromQrText } from '@/lib/game'
 import { createConnection, getSpecial, uidByTicketNo, type ShareRow } from '@/lib/connections'
 import { Loading, RetryNotice } from '@/components/load-state'
+import ExchangeTicket from '@/components/exchange-ticket'
 import QrScanner from '@/components/qr-scanner'
 import type { Special } from '@/lib/types'
 
@@ -31,6 +32,7 @@ export default function GamePage() {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [specialsSeen, setSpecialsSeen] = useState<Record<string, Special | null>>({})
+  const [mySpecial, setMySpecial] = useState<Special | null>(null)
   const recent = useRef<Map<string, number>>(new Map())
 
   const myUid = user?.uid ?? ''
@@ -64,6 +66,20 @@ export default function GamePage() {
       active = false
     }
   }, [myPartnerUids, specialsSeen])
+
+  // My own SSR status, for the badge on my exchange ticket. Only a PUBLIC
+  // special is ever badged — that face is what the other person reads, so
+  // stamping a hidden special would give it away before they scan.
+  useEffect(() => {
+    if (!myUid) return
+    let active = true
+    getSpecial(myUid).then((s) => {
+      if (active) setMySpecial(s)
+    })
+    return () => {
+      active = false
+    }
+  }, [myUid])
 
   const flash = (msg: string) => {
     setNotice(msg)
@@ -141,7 +157,6 @@ export default function GamePage() {
     )
 
   const shareUrl = `${window.location.origin}/t/${myUid}`
-  const myCode = (attendee.ticketNo ?? '').replace(/^MU-\d+-/, '') // 下4桁（口頭で伝える用）
   // My own points, with special bonuses applied — run through the SAME function
   // the host uses at the close, so this number and the final one can't disagree.
   // Showing it here leaks nothing: only my own partners are involved, and the
@@ -208,30 +223,19 @@ export default function GamePage() {
           </div>
 
           {mode === 'qr' ? (
-            <div className="flex w-full max-w-[440px] flex-col items-center gap-3 rounded-2xl border border-line bg-paper px-4 py-6">
-              {/* eslint-disable-next-line @next/next/no-img-element -- inline QR data-URI; next/image needs a loader (static export) and adds nothing here */}
-              <img
-                src={qrDataUrl(shareUrl, { light: '#ffffff' })}
-                alt="あなたのQR"
-                className="h-[190px] w-[190px]"
+            /* The ticket itself is the exchange face: the other person reads who
+               you are and scans you from one object, with no copy explaining the
+               rules to someone who is already playing. TICKET No. carries the
+               spoken 4-char fallback, so it needs no separate block either. */
+            <div className="flex w-full max-w-[440px] justify-center" data-testid="my-ticket">
+              <ExchangeTicket
+                name={attendee.name}
+                role={displayRole(attendee.job, attendee.jobOther)}
+                chars={expectationChars(attendee.expectations)}
+                ticketNo={attendee.ticketNo ?? ''}
+                shareUrl={shareUrl}
+                ssr={mySpecial?.public ? 24 : undefined}
               />
-              <p className="text-center text-[15px] font-extrabold">「交換しませんか？」</p>
-              <p className="text-center text-[12px] text-ink-soft">相手に読んでもらうと、ふたりに +1</p>
-              {myCode && (
-                <div className="mt-1 flex w-full flex-col items-center gap-1 rounded-xl bg-cream px-5 py-3">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink-soft">
-                    あなたの番号
-                  </span>
-                  <span
-                    className="font-mono text-[30px] font-extrabold leading-none text-meat"
-                    style={{ letterSpacing: '0.32em', paddingLeft: '0.32em' }}
-                    data-testid="my-code"
-                  >
-                    {myCode}
-                  </span>
-                  <span className="text-[11px] text-ink-soft">スキャンできない相手にはこの4文字を伝えて</span>
-                </div>
-              )}
             </div>
           ) : (
             <div className="flex w-full max-w-[440px] flex-col items-center gap-3 rounded-2xl border border-line bg-paper px-4 py-5">

@@ -8,7 +8,7 @@
 //    それは許容した設計（理由は firestore.rules の specials ブロック）。
 //  - フェイルセーフ（L/R・ローカル操作）は admin のときだけ。ランキング表示/非表示は
 //    誰でも（自分の画面だけ・モザイクは解除できない）。
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useAdmin } from '@/lib/use-admin'
 import { useGameState } from '@/lib/use-game-state'
@@ -17,6 +17,39 @@ import { Loading } from '@/components/load-state'
 
 const STAGE_W = 1600
 const STAGE_H = 900
+
+// Safari (Mac/iPad) still exposes the Fullscreen API under a webkit prefix, so
+// we probe both. iPhone Safari implements NEITHER for non-video elements
+// (confirmed missing by Apple as of 2024/12), so support-detection here also
+// doubles as "don't show a dead button on iPhone".
+type FsElement = HTMLElement & { webkitRequestFullscreen?: () => void }
+type FsDocument = Document & {
+  webkitFullscreenElement?: Element | null
+  webkitExitFullscreen?: () => void
+  webkitFullscreenEnabled?: boolean
+}
+
+// Fullscreen state read as an external store (no setState-in-effect). Snapshots
+// return stable primitives, and the server snapshot is false so static export
+// renders a consistent tree.
+const noopSubscribe = () => () => {}
+function subscribeFs(cb: () => void) {
+  document.addEventListener('fullscreenchange', cb)
+  document.addEventListener('webkitfullscreenchange', cb)
+  return () => {
+    document.removeEventListener('fullscreenchange', cb)
+    document.removeEventListener('webkitfullscreenchange', cb)
+  }
+}
+function isFsSnapshot() {
+  const doc = document as FsDocument
+  return !!(document.fullscreenElement || doc.webkitFullscreenElement)
+}
+function fsSupportedSnapshot() {
+  const doc = document as FsDocument
+  const el = document.documentElement as FsElement
+  return !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled) && !!(el.requestFullscreen || el.webkitRequestFullscreen)
+}
 
 export default function LivePage() {
   const { user, admin, checked } = useAdmin() // 閲覧はログインだけ必須（admin不要）。直操作の可否は admin
@@ -28,6 +61,11 @@ export default function LivePage() {
   // it was made against. `n` re-keys the animation when R is pressed repeatedly.
   const [ov, setOv] = useState<{ rev: number; on: boolean; n: number } | null>(null)
   const [scale, setScale] = useState(1)
+  // Fullscreen: `supported` gates the button (false on iPhone / at build time so
+  // static export never touches `document`); `isFs` keeps the label in sync even
+  // when the user exits via Esc / the system gesture.
+  const fsSupported = useSyncExternalStore(noopSubscribe, fsSupportedSnapshot, () => false)
+  const isFs = useSyncExternalStore(subscribeFs, isFsSnapshot, () => false)
 
   // Scale the fixed stage to fit the viewport (letterbox) — identical layout
   // everywhere. Kept in React state (not an imperative ref) so it's applied
@@ -40,6 +78,20 @@ export default function LivePage() {
     return () => {
       window.removeEventListener('resize', fit)
       window.removeEventListener('orientationchange', fit)
+    }
+  }, [])
+
+  const toggleFs = useCallback(() => {
+    const doc = document as FsDocument
+    const el = document.documentElement as FsElement
+    // Swallow rejections: a denied request (e.g. no user gesture) must not
+    // surface as an unhandled rejection in the projector's console.
+    if (!(document.fullscreenElement || doc.webkitFullscreenElement)) {
+      if (el.requestFullscreen) el.requestFullscreen().catch(() => {})
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {})
+      else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen()
     }
   }, [])
 
@@ -133,11 +185,8 @@ export default function LivePage() {
                 own phone, so this board IS the standing rather than a proxy for
                 it. A hidden SSR can therefore be inferred from a big jump; that
                 is accepted (see the `specials` block in firestore.rules). */}
-            <h3 className="mb-3 flex items-baseline gap-2 text-[18px] font-extrabold" style={{ color: '#ffd9b0' }}>
+            <h3 className="mb-3 text-[18px] font-extrabold" style={{ color: '#ffd9b0' }}>
               🏆 ポイントランキング
-              <span className="text-[12px] font-bold" style={{ color: '#c9b3a5' }}>
-                ボーナス込み
-              </span>
             </h3>
             <div className="relative">
               <ol className="flex flex-col gap-2" style={rankingMode === 'mosaic' ? { filter: 'blur(9px)', opacity: 0.85 } : undefined}>
@@ -229,6 +278,7 @@ export default function LivePage() {
           (barVisible ? 'opacity-100' : 'pointer-events-none opacity-0')
         }
       >
+        {fsSupported && <CtlBtn label={isFs ? '全画面を解除' : '全画面'} onClick={toggleFs} />}
         <CtlBtn label={showRanking ? '順位を隠す' : '順位を出す'} onClick={() => setShowRanking((v) => !v)} />
         {admin && (
           <>

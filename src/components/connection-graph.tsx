@@ -4,6 +4,14 @@
 // a spark when they appear, public staff glow, and name labels are placed
 // biggest-first with overlap culling (up to ~half the room) so it never turns
 // into an unreadable jumble. Staff are named only when they reach the top 3.
+//
+// Layout is intentionally amorphous even with zero edges: every node carries a
+// per-node "personal space" (rho) so the repulsion is polydisperse. Equal-size
+// repelling disks under a centering pull settle into a hexagonal crystal (looks
+// mechanically uniform); varying the size frustrates that ordering and yields a
+// glassy/irregular packing — the same physics by which mixed grain sizes never
+// crystallize. rho is derived from the uid, so a given person always lands the
+// same way and node *drawn* size (degree-based) is untouched.
 import { useEffect, useRef } from 'react'
 
 export interface GraphNodeInput {
@@ -24,6 +32,21 @@ interface Node {
   vy: number
   deg: number
   pulse: number
+  rho: number // personal-space factor (polydispersity); see rhoFromUid
+}
+
+// Deterministic personal-space factor in ~[0.35, 1.65], mean 1 (so overall
+// density is unchanged vs. equal-size). FNV-1a over the uid → stable per person.
+// The ±spread is what breaks the uniform lattice; mean 1 keeps the crowd the
+// same overall size.
+function rhoFromUid(uid: string): number {
+  let h = 2166136261
+  for (let i = 0; i < uid.length; i++) {
+    h ^= uid.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  const u = (h >>> 0) / 4294967296 // [0,1)
+  return 1 + (u - 0.5) * 1.3
 }
 
 export default function ConnectionGraph({
@@ -96,6 +119,7 @@ export default function ConnectionGraph({
             vy: 0,
             deg: 0,
             pulse: 0,
+            rho: rhoFromUid(n.uid),
           })
       }
       for (const uid of [...model.keys()]) if (!seen.has(uid)) model.delete(uid)
@@ -137,8 +161,11 @@ export default function ConnectionGraph({
           const dy = p.y - q.y
           const d2 = dx * dx + dy * dy + 0.01
           const d = Math.sqrt(d2)
-          if (d < 210) {
-            const f = 620 / d2
+          // Polydisperse repulsion: a node with more personal space (rho) pushes
+          // harder and from farther, so the packing is irregular, not a lattice.
+          const range = 210 * ((p.rho + q.rho) / 2)
+          if (d < range) {
+            const f = (620 * p.rho * q.rho) / d2
             const fx = (dx / d) * f
             const fy = (dy / d) * f
             p.vx += fx

@@ -1,9 +1,9 @@
 'use client'
-// 参加者スマホ画面（繋がりレース・issue #11 / #13）
+// 参加者スマホ画面（Meat & Greet・issue #11 / #13）
 //  - 自分のQR（既存チケットQR /t/{uid} を流用）を相手に見せる
-//  - 相手のQRをスキャン、またはチケット下4桁を手入力 → 繋がり成立（両者+1P）
+//  - 相手のQRをスキャン、またはチケット下4桁を手入力 → つながり成立（両者+1P）
 //  - SR/SSR（ボーナス点をくれる人）を引くと専用演出。SR＝公表・SSR＝隠し（引くまで不明）
-//  - 自分の点数（ボーナス込み・最終集計と同じ計算）と Mate（交換した相手の一覧）
+//  - 自分の点数（ボーナス込み・最終集計と同じ計算）と Mate（つながった相手の一覧）
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useMyAttendee } from '@/lib/use-my-attendee'
@@ -102,9 +102,9 @@ export default function GamePage() {
       try {
         const res = await createConnection(myUid, otherUid)
         if (res === 'self') {
-          flash('自分とは繋がれません')
+          flash('自分とはつながれません')
         } else if (res === 'exists') {
-          flash('もう繋がっています ✓')
+          flash('もうつながっています ✓')
         } else {
           const sp = await getSpecial(otherUid)
           setSpecialsSeen((m) => ({ ...m, [otherUid]: sp }))
@@ -196,7 +196,7 @@ export default function GamePage() {
         </div>
         <b className="text-[20px] leading-none text-ink tabular-nums">
           {myPartnerUids.size}
-          <span className="text-[12px] font-bold text-ink-soft">人と交換</span>
+          <span className="text-[12px] font-bold text-ink-soft">人とつながった</span>
         </b>
       </div>
 
@@ -275,11 +275,11 @@ export default function GamePage() {
 
       <div className="w-full max-w-[440px]">
         <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-meat">
-          Mate ・ {partners.length}人と交換
+          Mate ・ {partners.length}人とつながった
         </p>
         {partners.length === 0 ? (
           <p className="rounded-xl bg-cream px-3 py-4 text-center text-[13px] text-ink-soft">
-            まだ交換していません。となりの人と繋がろう！
+            まだつながりがありません。となりの人にあいさつしよう！
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2" data-testid="meishi">

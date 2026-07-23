@@ -1,9 +1,9 @@
 'use client'
 // SR / SSR 設定（Meat & Greet・issue #11 / E）。運営が当日設定。
 // 高得点の人。public:true = SR（公表・/live で発光）／
-// public:false = SSR（隠し。見た目は通常のまま、繋がった相手にだけ分かる）。
+// public:false = SSR（隠し。見た目は通常のまま、つながった相手にだけ分かる）。
 // 隠しのほうが上位レアなのは「狙って当てにいけない」ため。
-//  - bonusPoints = 通常ユーザーがその人と繋がって得る点（個別）
+//  - bonusPoints = 通常ユーザーがその人とつながって得る点（個別）
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useAdmin } from '@/lib/use-admin'
@@ -77,7 +77,7 @@ export default function SpecialsAdminPage() {
       <p className="rounded-xl bg-cream px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
 この人に会った人は、1点ではなくその人のボーナス点をもらえます。点は一人ずつ決められます。
         <b className="text-flame">SR（公表）</b>は会場スクリーンで光り、誰が高得点か全員に分かります。
-        <b className="text-ink">SSR（隠し）</b>はふつうの参加者と同じ見た目のまま、繋がった相手にだけ分かる当たりです。
+        <b className="text-ink">SSR（隠し）</b>はふつうの参加者と同じ見た目のまま、つながった相手にだけ分かる当たりです。
         <br />
         選ぶとすぐ保存されます。設定中：<b className="text-meat tabular-nums">{specials.size}</b> 人
       </p>

@@ -82,7 +82,7 @@ export default function ControlPage() {
       <Step n={1} title={open ? '開催中' : '終了'} state={open ? (current === 1 ? 'now' : 'done') : 'done'}>
         <p className={subCls}>
           {open
-            ? '参加者どうしがQRを見せ合って繋がれます。'
+            ? '参加者どうしがQRを見せ合ってつながれます。'
             : 'スキャンは止まっています。もう一度つなげたいときは開催に戻せます。'}
         </p>
         {!open && (

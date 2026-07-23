@@ -201,7 +201,7 @@ export default function LivePage() {
                     </span>
                   </li>
                 ))}
-                {ranking.length === 0 && <li className="text-[17px]" style={{ color: '#c9b3a5' }}>まだ繋がりがありません</li>}
+                {ranking.length === 0 && <li className="text-[17px]" style={{ color: '#c9b3a5' }}>まだつながりがありません</li>}
               </ol>
               {rankingMode === 'mosaic' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
@@ -233,7 +233,7 @@ export default function LivePage() {
               // but nobody connected. Saying "締めると出ます" after it's been
               // closed would just be wrong.
               <p className="text-[22px]" style={{ color: '#e9d6c6' }}>
-                {control?.game === 'closed' ? 'まだ誰も繋がっていません' : 'ゲームを締めると結果が出ます'}
+                {control?.game === 'closed' ? 'まだ誰もつながっていません' : 'ゲームを締めると結果が出ます'}
               </p>
             ) : (
               <div className="flex items-end gap-7">

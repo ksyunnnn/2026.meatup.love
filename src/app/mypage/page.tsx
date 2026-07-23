@@ -165,8 +165,8 @@ export default function MyPage() {
         <section className="w-full max-w-[540px] rounded-[14px] border-2 border-line bg-paper p-5 text-center">
           <h2 className="text-[16px] font-extrabold">Meat &amp; Greet 🍖</h2>
           <p className="mx-auto mt-2 max-w-[360px] text-[13px] leading-relaxed text-ink-soft">
-            当日、会場であいさつしてポイントを集めるゲーム。
-            となりの人とQRを見せ合って繋がろう。
+            当日、会場のみんなとあいさつして、つながりを育てるゲーム。
+            となりの人とQRを見せ合ってつながろう。
           </p>
           <Link className="btn btn--primary btn--block mx-auto mt-4 max-w-[280px]" href="/game">
             ゲームを開く

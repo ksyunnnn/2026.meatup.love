@@ -54,7 +54,7 @@ export default function ExchangeTicket({
   return (
     <div
       style={{ containerType: 'inline-size', position: 'relative', width: '100%', maxWidth: 420 }}
-      aria-label={`${name} さんの交換用チケット`}
+      aria-label={`${name} さんのチケット`}
     >
       {/* The corner stamp lives outside the card so the card's overflow:hidden
           (which clips the watermark) doesn't clip its overhang. */}

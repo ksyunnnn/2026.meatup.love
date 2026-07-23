@@ -131,26 +131,35 @@ service cloud.firestore {
         return request.resource.data.keys()
           .hasOnly(['name', 'ticketNo', 'edition', 'role', 'expectations']);
       }
-      // Owner-only; only allow-listed fields; ticketNo is fixed once written
-      // (name may change later for display, but the number can't be forged).
-      // The public ticketNo must match the owner's real attendees record —
-      // shares is always created in the same transaction as attendees/{uid}
-      // (see createAttendee), so getAfter sees the co-written attendee. This
-      // stops a guest from publishing a fabricated ticket number.
-      allow create: if isSignedIn()
-        && request.auth.uid == uid
-        && sharesFieldsOk()
+      // Two writers, different guards:
+      //  - the OWNER (a guest), whose ticketNo must equal their real attendees
+      //    record — the forgery guard that stops a guest publishing a fake
+      //    number. shares is co-written with attendees in one transaction, so
+      //    getAfter() sees the number being written.
+      //  - an ADMIN, who is already fully trusted (edits/deletes anyone, grants
+      //    admin) and is the only other path that touches shares: 参加に戻す
+      //    rebuilds the projection cancel removed. The forgery guard is about
+      //    guests, not admins, so it doesn't apply here.
+      allow create: if sharesFieldsOk()
         && request.resource.data.name is string
         && request.resource.data.ticketNo is string
-        && request.resource.data.ticketNo
-             == getAfter(/databases/$(database)/documents/attendees/$(uid)).data.ticketNo;
-      allow update: if isSignedIn()
-        && request.auth.uid == uid
-        && sharesFieldsOk()
-        && request.resource.data.ticketNo == resource.data.ticketNo;
-      // Host deletes a guest from /admin: the attendee doc and this public
-      // projection are removed together, so the deleted guest's OG card stops
-      // resolving. Owner can't delete their own (no self-delete path needed).
+        && (
+          isAdmin()
+          || (isSignedIn()
+              && request.auth.uid == uid
+              && request.resource.data.ticketNo
+                   == getAfter(/databases/$(database)/documents/attendees/$(uid)).data.ticketNo)
+        );
+      allow update: if sharesFieldsOk()
+        && (
+          isAdmin()
+          || (isSignedIn()
+              && request.auth.uid == uid
+              && request.resource.data.ticketNo == resource.data.ticketNo)
+        );
+      // Host removes a guest's public projection: from 参加キャンセル (share
+      // deleted, attendee kept) or 完全削除 (both removed). The OG card then
+      // stops resolving. Owner can't delete their own (no self-delete path).
       allow delete: if isAdmin();
     }
 

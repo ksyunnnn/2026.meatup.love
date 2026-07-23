@@ -15,10 +15,10 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Attendee, AttendeeStatus } from './types'
-import { EDITION, generateTicketNo, displayRole } from './ticket'
+import { EDITION, generateTicketNo, shareProjection } from './ticket'
 
 // Re-export so existing importers (invites.ts, admin) keep working.
-export { EDITION, generateTicketNo }
+export { EDITION, generateTicketNo, shareProjection }
 
 export interface CreateAttendeeInput {
   uid: string
@@ -98,20 +98,18 @@ export async function createAttendee(
 
     tx.set(doc(db, 'attendees', input.uid), data)
 
-    // Public, minimal projection for OG image generation (read without auth).
-    // Holds only the non-sensitive fields drawn on the shared ticket: the
-    // resolved role label and the expectation keys (→ watermark kanji).
-    // Gender is intentionally NOT projected (sensitive, not on the ticket).
-    const share: Record<string, unknown> = {
-      name: input.name,
-      ticketNo,
-      edition: EDITION,
-    }
-    const role = displayRole(input.job, input.jobOther)
-    if (role) share.role = role
-    if (input.expectations && input.expectations.length > 0)
-      share.expectations = input.expectations
-    tx.set(doc(db, 'shares', input.uid), share)
+    // Public projection (see shareProjection). Written in the same transaction
+    // as the attendee so the rules' getAfter() ticketNo check passes.
+    tx.set(
+      doc(db, 'shares', input.uid),
+      shareProjection({
+        name: input.name,
+        ticketNo,
+        job: input.job,
+        jobOther: input.jobOther,
+        expectations: input.expectations,
+      }),
+    )
 
     // Surface the assigned number + resolved status so the caller (the register
     // completion screen) can render the ticket immediately without a refetch.
@@ -216,23 +214,39 @@ export async function approveAttendee(uid: string, adminUid: string) {
 
 /** Host records a guest's cancellation (heard off-app via the contact channel).
  *  Remembers the prior status so 参加に戻す can restore it. Cancelled guests drop
- *  out of the active roster and tallies. */
+ *  out of the active roster and tallies — AND off the live graph / OG cards: the
+ *  public `shares` projection is deleted here, so a no-show never sits as a node
+ *  that can't connect. 参加に戻す rebuilds it. */
 export async function cancelAttendee(uid: string, from: AttendeeStatus) {
-  await updateDoc(doc(db, 'attendees', uid), {
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'attendees', uid), {
     status: 'cancelled' as AttendeeStatus,
     cancelledAt: serverTimestamp(),
     cancelledFrom: from,
   })
+  batch.delete(doc(db, 'shares', uid))
+  await batch.commit()
 }
 
 /** Undo a cancellation: restore the status the guest had before cancelling
- *  (falls back to pending if unknown). */
+ *  (falls back to pending if unknown) and rebuild the public `shares` projection
+ *  that cancel removed, so the guest reappears on the live graph and their OG
+ *  card resolves again. The projection is derived from the surviving attendee
+ *  doc (cancel only flipped status), so no data needs to be carried in. A manual
+ *  placeholder (addedByAdmin, no auth account) never had a share, so skip it. */
 export async function restoreAttendee(uid: string, to: AttendeeStatus) {
-  await updateDoc(doc(db, 'attendees', uid), {
+  const snap = await getDoc(doc(db, 'attendees', uid))
+  const a = snap.data() as Attendee | undefined
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'attendees', uid), {
     status: to,
     cancelledAt: deleteField(),
     cancelledFrom: deleteField(),
   })
+  if (a && !a.addedByAdmin) {
+    batch.set(doc(db, 'shares', uid), shareProjection(a))
+  }
+  await batch.commit()
 }
 
 /** Fields the host fills in when adding someone manually. */

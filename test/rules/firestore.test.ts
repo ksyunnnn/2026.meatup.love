@@ -340,6 +340,48 @@ describe('shares (public OG projection)', () => {
     const admin = testEnv.authenticatedContext('admin1').firestore()
     await assertSucceeds(deleteDoc(doc(admin, 'shares/u1')))
   })
+
+  // 参加に戻す (restoreAttendee) rebuilds the share cancel removed. The admin
+  // does this write, so an admin must be able to create/update a share — and
+  // WITHOUT the owner's ticketNo↔attendee match, since restore derives the
+  // number from the surviving attendee doc, not from the request context.
+  it('a host may create a share (参加に戻す rebuild), no ticketNo match needed', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin1'), {})
+    })
+    const admin = testEnv.authenticatedContext('admin1').firestore()
+    await assertSucceeds(
+      setDoc(doc(admin, 'shares/u1'), {
+        name: 'A',
+        ticketNo: 'X',
+        edition: '2026',
+        role: 'エンジニア',
+        expectations: ['meat'],
+      }),
+    )
+  })
+
+  it('the allow-list still binds an admin write (no gender leak)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin1'), {})
+    })
+    const admin = testEnv.authenticatedContext('admin1').firestore()
+    await assertFails(
+      setDoc(doc(admin, 'shares/u1'), {
+        name: 'A',
+        ticketNo: 'X',
+        edition: '2026',
+        gender: '男',
+      }),
+    )
+  })
+
+  it('a non-admin signed-in user still cannot write someone else’s share', async () => {
+    const evil = testEnv.authenticatedContext('evil').firestore()
+    await assertFails(
+      setDoc(doc(evil, 'shares/u1'), { name: 'B', ticketNo: 'Y', edition: '2026' }),
+    )
+  })
 })
 
 describe('admins', () => {

@@ -40,3 +40,30 @@ export function displayRole(job?: string, jobOther?: string): string {
   if (job === JOB_OTHER) return jobOther?.trim() || JOB_OTHER
   return job
 }
+
+/**
+ * The public `shares/{uid}` projection of an attendee — the ONE place the
+ * mapping from attendee → public ticket card lives, so registration
+ * (createAttendee) and 参加に戻す (restoreAttendee) can never drift apart.
+ * Holds only the non-sensitive fields drawn on the shared ticket: the resolved
+ * role label and the expectation keys (→ watermark kanji). Gender is deliberately
+ * omitted. Optional fields are left OFF entirely (never written as undefined)
+ * so the object's keys stay inside the rules' allow-list exactly.
+ */
+export function shareProjection(a: {
+  name: string
+  ticketNo?: string
+  job?: string
+  jobOther?: string
+  expectations?: string[]
+}): Record<string, unknown> {
+  const share: Record<string, unknown> = {
+    name: a.name,
+    ticketNo: a.ticketNo ?? '',
+    edition: EDITION,
+  }
+  const role = displayRole(a.job, a.jobOther)
+  if (role) share.role = role
+  if (a.expectations && a.expectations.length > 0) share.expectations = a.expectations
+  return share
+}

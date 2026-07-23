@@ -8,12 +8,19 @@
 //    それは許容した設計（理由は firestore.rules の specials ブロック）。
 //  - フェイルセーフ（L/R・ローカル操作）は admin のときだけ。ランキング表示/非表示は
 //    誰でも（自分の画面だけ・モザイクは解除できない）。
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useAdmin } from '@/lib/use-admin'
 import { useGameState } from '@/lib/use-game-state'
+import { subscribeNewConnections } from '@/lib/connections'
 import ConnectionGraph from '@/components/connection-graph'
 import { Loading } from '@/components/load-state'
+
+interface GreetToast {
+  id: number
+  a: string
+  b: string
+}
 
 const STAGE_W = 1600
 const STAGE_H = 900
@@ -67,6 +74,16 @@ export default function LivePage() {
   const fsSupported = useSyncExternalStore(noopSubscribe, fsSupportedSnapshot, () => false)
   const isFs = useSyncExternalStore(subscribeFs, isFsSnapshot, () => false)
 
+  // つながり速報: a fresh toast per NEW edge (existing edges on load never fire).
+  const [toasts, setToasts] = useState<GreetToast[]>([])
+  const toastIdRef = useRef(0)
+  // Latest name map, read inside the (long-lived) subscription callback so it
+  // always resolves against current shares without re-subscribing.
+  const nameOfRef = useRef(new Map<string, string>())
+  useEffect(() => {
+    nameOfRef.current = new Map(shares.map((s) => [s.uid, s.name]))
+  }, [shares])
+
   // Scale the fixed stage to fit the viewport (letterbox) — identical layout
   // everywhere. Kept in React state (not an imperative ref) so it's applied
   // whenever the stage renders — including after the auth gate resolves.
@@ -79,6 +96,19 @@ export default function LivePage() {
       window.removeEventListener('resize', fit)
       window.removeEventListener('orientationchange', fit)
     }
+  }, [])
+
+  // Subscribe once. setState lives in the snapshot/timeout callbacks (not the
+  // effect body), so it doesn't trip react-hooks/set-state-in-effect. Each toast
+  // auto-dismisses after ~4.2s; the stack collapses to 3 + "+N".
+  useEffect(() => {
+    return subscribeNewConnections((edge) => {
+      const id = ++toastIdRef.current
+      const a = nameOfRef.current.get(edge.a) ?? '—'
+      const b = nameOfRef.current.get(edge.b) ?? '—'
+      setToasts((ts) => [...ts, { id, a, b }])
+      setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== id)), 4200)
+    })
   }, [])
 
   const toggleFs = useCallback(() => {
@@ -213,6 +243,52 @@ export default function LivePage() {
           </div>
         )}
 
+        {/* つながり速報 — Sonner-style stack, bottom-left, sitting above the
+            counter. Newest at the bottom (front); older ones scale/fade behind,
+            with the rest collapsed into a "+N件" badge. */}
+        {toasts.length > 0 && (
+          <div className="absolute left-7" style={{ bottom: 84, width: 360, zIndex: 15 }}>
+            {toasts.length > 3 && (
+              <div className="absolute left-1 text-[15px] font-extrabold" style={{ bottom: 108, color: '#b49b8c' }}>
+                +{toasts.length - 3} 件
+              </div>
+            )}
+            {toasts.slice(-3).map((t, i, arr) => {
+              const rev = arr.length - 1 - i // 0 = newest (front)
+              return (
+                <div
+                  key={t.id}
+                  className="absolute inset-x-0"
+                  style={{
+                    bottom: 0,
+                    zIndex: 100 - rev,
+                    transform: `translateY(${-rev * 16}px) scale(${1 - rev * 0.05})`,
+                    opacity: 1 - rev * 0.14,
+                    transition: 'transform .4s cubic-bezier(.2,1,.3,1), opacity .4s',
+                  }}
+                >
+                  <div
+                    className="flex flex-col gap-0.5 rounded-2xl px-5 py-3.5"
+                    style={{
+                      background: 'rgba(28,18,17,.95)',
+                      border: '1px solid rgba(255,138,61,.34)',
+                      boxShadow: '0 16px 36px -14px rgba(0,0,0,.75)',
+                      animation: 'toastin .42s cubic-bezier(.2,1,.3,1) both',
+                    }}
+                  >
+                    <span className="text-[13px] font-black tracking-[0.14em]" style={{ color: '#ff6500' }}>
+                      JUST MEAT!
+                    </span>
+                    <span className="text-[22px] font-extrabold" style={{ color: '#f6e6d8' }}>
+                      {t.a} <span className="mx-0.5">🤝</span> {t.b}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         <div className="absolute bottom-6 left-7 text-[17px]" style={{ color: '#e9d6c6' }}>
           累計つながり <b className="text-[22px] text-white tabular-nums">{total}</b> 本 ・ 参加{' '}
           <b className="text-[22px] text-white tabular-nums">{shares.length}</b> 人
@@ -288,7 +364,7 @@ export default function LivePage() {
         )}
       </div>
 
-      <style>{`@keyframes growbar{from{transform:scaleY(0)}to{transform:scaleY(1)}}`}</style>
+      <style>{`@keyframes growbar{from{transform:scaleY(0)}to{transform:scaleY(1)}}@keyframes toastin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </main>
   )
 }

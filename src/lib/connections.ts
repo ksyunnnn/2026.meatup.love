@@ -49,6 +49,23 @@ export function subscribeConnections(cb: (edges: Connection[]) => void): () => v
   })
 }
 
+/** Fires ONCE per edge that appears AFTER the subscription is established —
+ *  the projector's "つながり速報" toast. The very first snapshot delivers every
+ *  pre-existing edge as an 'added' change; we skip that whole batch (primed) so
+ *  opening /live mid-event doesn't replay the history as a flood of toasts. */
+export function subscribeNewConnections(onAdded: (edge: Connection) => void): () => void {
+  let primed = false
+  return onSnapshot(collection(db, 'connections'), (snap) => {
+    if (!primed) {
+      primed = true
+      return
+    }
+    for (const ch of snap.docChanges()) {
+      if (ch.type === 'added') onAdded(ch.doc.data() as Connection)
+    }
+  })
+}
+
 // ---- specials (bonus users) ----
 
 /** Resolve ONE special by uid (single-doc get, allowed for signed-in users).

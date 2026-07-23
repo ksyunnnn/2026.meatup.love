@@ -1,4 +1,4 @@
-# 現状と引き継ぎ（2026-07-02 更新）
+# 現状と引き継ぎ（2026-07-23 更新）
 
 ブランチ: `main` ＝ `origin`（push 済み）。本番(Pages/Firebase)は最新ビルド反映済み。
 デプロイは手動 `wrangler`（git 未連携）。今後も `main` で作業。
@@ -172,7 +172,30 @@ commit `8044bc7`（編集/統合・ルール変更なし）＋後続コミット
 - **Content 廃止**（役割を Meat Mates に譲渡）／**Wanted 廃止**（`WANTED` 定数・セクションとも削除。連絡導線は footer に残存）。
 - 検証用ルート `src/app/friends-preview/` は撤去済み。※プレビュー用 Pages ブランチ `friends-preview` は残置（無害・未リンク）。
 
+## 2026-07-22〜23（会場ゲーム Meat & Greet 一式・本番反映済み）
+当日の会場交流ポイントゲーム **Meat & Greet**（旧称「繋がりレース」issue #11）を実装し本番反映。
+仕様の正本は `docs/GAME.md`（issue #11 は設計時点の記録・食い違いは GAME.md が正）。経緯は PR #16。
+- **画面**：`/game`（参加者・交換用チケット提示＋QRスキャン＋下4桁手入力＋自分の点数＋Mate一覧）／
+  `/live`（会場スクリーン・要ログイン＝admin不要・グラフ＋ポイントランキング＋結果発表）／
+  `/control`（司会・開始/締め/順位伏せ/結果発表・全操作可逆）／`/admin/specials`（SR/SSR設定）。
+- **採点**：得点は1種類（`src/lib/game.ts` の `finalScoreFrom`）。相手が SR/SSR ならその人の
+  `bonusPoints`、他は1点。ライブ順位もボーナス込み＝点の跳ねで SSR を推測可（お楽しみとして許容）。
+- **レアリティ**：公表=SR、非公表=SSR（狙って当てられない非公表が上位）。判定 `rarityOf()`。
+- **データ**：`connections`（ID=uidソート結合で重複不可）/`specials`（get・list ともサインイン要・
+  list を admin 限定から緩めた＝/live がボーナス表を要るため。理由は firestore.rules の specials 節）/
+  `control`/`results`/`staff`（SRのみ）。
+- **キャンセル→グラフ連動（2026-07-23 追加・本番反映済み）**：`cancelAttendee` が `shares/{uid}` を
+  削除（点が消える・OGカードも解決しなくなる）、`restoreAttendee` が `attendees/{uid}` から
+  `shareProjection`（`src/lib/ticket.ts`）で作り直す（点が戻る）。来ない人の点が浮く問題を解消。
+  rules は `shares` の create/update を「本人 or admin」に緩和（本人経路の ticketNo 偽造ガードは維持）。
+  既存キャンセル2名（nanammeon `86lY…` / えばたあや `O4i1…`）は本番で reconcile 済み＝`shares` 削除・
+  `attendees` は cancelled のまま保全。現在 `/live` の点＝**approved 55件のみ**。
+- **CI 復旧**：`data-section` の `set-state-in-effect` lint エラー3件（2026-06-26 以降 CI 赤）を修正。
+- **検証**：単体41 / ルール36+3 / e2e往復（`test/e2e/cancel-restore-roundtrip.mjs`）通過。ビルド通過。
+
 ## 残タスク
+- [ ] **参加者情報CSVダウンロード機能**（当日の参加者管理用・`/admin` にボタン設置）。2026-07-23 依頼・**未着手**。
+      着手時 `/frontend-design:frontend-design` と HIG を読み込んでから設計する方針。
 - [x] **Schedule の中身**（当日タイムテーブル・2026-07-14 公開。トップ先頭＝Data の上に配置）。
 
 ### クローズ済み（2026-07-01・運用判断＝いずれも問題化せずクローズ）

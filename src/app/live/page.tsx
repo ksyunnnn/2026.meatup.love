@@ -16,6 +16,7 @@ import { subscribeNewConnections } from '@/lib/connections'
 import { finalScoreFrom, rankFrom, type Edge } from '@/lib/game'
 import type { Connection } from '@/lib/types'
 import ConnectionGraph from '@/components/connection-graph'
+import EventLogo from '@/components/event-logo'
 import { Loading } from '@/components/load-state'
 
 interface GreetToast {
@@ -274,36 +275,44 @@ export default function LivePage() {
           />
         </div>
 
-        <div className="absolute left-7 top-6 flex items-center gap-3 text-[22px] font-extrabold text-[#f6e6d8]">
-          <span className="inline-block h-3.5 w-3.5 rounded-full" style={{ background: '#ff6500', boxShadow: '0 0 16px #ff6500' }} />
-          Meat &amp; Greet
-        </div>
+        {/* 左上＝イベントのブランドロゴ（会場常設・撮影背景で何のイベントか伝える）。
+            チケット/OGP の意匠を踏襲。ゲーム名は右上スコアボードへ移設した。 */}
+        <EventLogo variant="A" />
 
-        {showRanking && (
-          <div
-            className="absolute right-6 top-6 w-[380px] rounded-2xl p-4"
-            style={{ background: 'rgba(20,12,13,.62)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,220,190,.1)' }}
-          >
-            {/* Bonus-inclusive points — the same number each guest sees on their
-                own phone, so this board IS the standing rather than a proxy for
-                it. A hidden SSR can therefore be inferred from a big jump; that
-                is accepted (see the `specials` block in firestore.rules). */}
-            <h3 className="mb-3 text-[18px] font-extrabold" style={{ color: '#ffd9b0' }}>
-              🏆 ポイントランキング
-            </h3>
-            <div className="relative">
-              <div style={rankingMode === 'mosaic' ? { filter: 'blur(9px)', opacity: 0.85 } : undefined}>
-                <RankingBoard list={activeRanking} nameOf={nameOf} />
-              </div>
-              {rankingMode === 'mosaic' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-[34px]">🙈</span>
-                  <small className="mt-1 text-[15px] font-bold" style={{ color: '#ffd9b0' }}>順位は伏せ中</small>
-                </div>
-              )}
-            </div>
+        {/* 右上＝スコアボード。ゲーム名「Meat & Greet」はその見出し（アイブロウ）
+            として統合し、ランキングを隠していても常時表示する。 */}
+        <div className="absolute right-6 top-6 flex w-[380px] flex-col items-end gap-3">
+          <div className="flex items-center gap-2.5 text-[20px] font-extrabold text-[#f6e6d8]">
+            <span className="inline-block h-3 w-3 rounded-full" style={{ background: '#ff6500', boxShadow: '0 0 14px #ff6500' }} />
+            Meat &amp; Greet
           </div>
-        )}
+
+          {showRanking && (
+            <div
+              className="w-full rounded-2xl p-4"
+              style={{ background: 'rgba(20,12,13,.62)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,220,190,.1)' }}
+            >
+              {/* Bonus-inclusive points — the same number each guest sees on their
+                  own phone, so this board IS the standing rather than a proxy for
+                  it. A hidden SSR can therefore be inferred from a big jump; that
+                  is accepted (see the `specials` block in firestore.rules). */}
+              <h3 className="mb-3 text-[18px] font-extrabold" style={{ color: '#ffd9b0' }}>
+                🏆 ポイントランキング
+              </h3>
+              <div className="relative">
+                <div style={rankingMode === 'mosaic' ? { filter: 'blur(9px)', opacity: 0.85 } : undefined}>
+                  <RankingBoard list={activeRanking} nameOf={nameOf} />
+                </div>
+                {rankingMode === 'mosaic' && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span className="text-[34px]">🙈</span>
+                    <small className="mt-1 text-[15px] font-bold" style={{ color: '#ffd9b0' }}>順位は伏せ中</small>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* つながり速報 — Sonner-style stack, bottom-left, sitting above the
             counter. Newest at the bottom (front); older ones scale/fade behind,

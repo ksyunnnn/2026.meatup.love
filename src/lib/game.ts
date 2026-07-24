@@ -52,6 +52,16 @@ export function finalScoreFrom(edges: Edge[], bonus: Map<string, number>): Map<s
   return m
 }
 
+/** uids kept OFF the ranking board and the prize podium — but otherwise entirely
+ *  normal: their connections still score for the people they meet, they still
+ *  appear as a node in the graph and in the 参加 headcount. The host/owner is here
+ *  so running the game doesn't look like competing in it (fairness). `admins` is
+ *  not client-listable (see firestore.rules), so this can't be derived at runtime
+ *  — it's a fixed config. Add a uid here to exclude someone from the standings. */
+export const RANKING_EXCLUDED = new Set<string>([
+  'rc9hmkk3M6dbpPfL8h6rhb9bi8h1', // こばしゅん（オーナー／本番 admin）
+])
+
 export interface RankEntry {
   uid: string
   score: number

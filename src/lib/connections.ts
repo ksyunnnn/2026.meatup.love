@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { EDITION } from './ticket'
-import { connectionId, edgeEndpoints, finalScoreFrom, rankFrom } from './game'
+import { connectionId, edgeEndpoints, finalScoreFrom, rankFrom, RANKING_EXCLUDED } from './game'
 import type { Connection, Special, GameControl } from './types'
 
 // ---- edges (繋がり) ----
@@ -185,7 +185,7 @@ export async function computeAndWriteResults(topN = 10): Promise<ResultEntry[]> 
   const names = new Map(sharesSnap.docs.map((d) => [d.id, (d.data() as { name?: string }).name ?? '—']))
 
   const top = rankFrom(finalScoreFrom(edges, bonus))
-    .filter((e) => !staff.has(e.uid))
+    .filter((e) => !staff.has(e.uid) && !RANKING_EXCLUDED.has(e.uid))
     .slice(0, topN)
     .map((e) => ({ uid: e.uid, name: names.get(e.uid) ?? '—', score: e.score }))
 

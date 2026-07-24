@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { useAdmin } from '@/lib/use-admin'
 import { useGameState } from '@/lib/use-game-state'
 import { subscribeNewConnections } from '@/lib/connections'
-import { finalScoreFrom, rankFrom, type Edge } from '@/lib/game'
+import { finalScoreFrom, rankFrom, RANKING_EXCLUDED, type Edge } from '@/lib/game'
 import type { Connection } from '@/lib/types'
 import ConnectionGraph from '@/components/connection-graph'
 import EventLogo from '@/components/event-logo'
@@ -238,7 +238,11 @@ export default function LivePage() {
   const replaying = replayActive && (replayShown as number) < replayTotal // still building
   const shownEdges = replayActive ? sorted.slice(0, replayShown as number) : edges
   const bonus = new Map([...specials].map(([uid, s]) => [uid, s.bonusPoints]))
-  const activeRanking = replayActive ? rankFrom(finalScoreFrom(shownEdges as Edge[], bonus)) : ranking
+  // Drop excluded uids (host/owner) from the standings — board and top-3 glow —
+  // while leaving them on the graph and in the counter. See RANKING_EXCLUDED.
+  const activeRanking = (
+    replayActive ? rankFrom(finalScoreFrom(shownEdges as Edge[], bonus)) : ranking
+  ).filter((r) => !RANKING_EXCLUDED.has(r.uid))
   const top3 = new Set(activeRanking.slice(0, 3).map((r) => r.uid))
   const total = replayActive ? (replayShown as number) : edges.length
   const replayTime =

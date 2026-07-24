@@ -27,6 +27,7 @@ import {
 } from '@/lib/invites'
 import { JOBS, EXPECTATIONS } from '@/lib/profile'
 import { writeStats } from '@/lib/stats'
+import { attendeesToCsv } from '@/lib/csv'
 import {
   AttendeeFields,
   blankAttendeeForm,
@@ -80,6 +81,24 @@ function inviteUrl(inv: InviteWithToken): string {
   if (inv.job) qs.set('job', inv.job)
   qs.set('t', inv.token)
   return `${window.location.origin}/invite?${qs.toString()}`
+}
+
+// Download the full roster as CSV. Prepend a UTF-8 BOM so Excel opens the
+// Japanese headers/values correctly; filename carries today's date.
+function downloadRosterCsv(rows: AttendeeWithId[]): void {
+  const csv = attendeesToCsv(rows)
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const now = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  const stamp = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `meatup2026-participants-${stamp}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 /**
@@ -926,9 +945,21 @@ export default function AdminPage() {
       </section>
 
       <section className={sectionCls}>
-        <h2 className={h2Cls}>
-          参加者一覧（{activeAll.length}・支払い済み {paidCount}）
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className={h2Cls}>
+            参加者一覧（{activeAll.length}・支払い済み {paidCount}）
+          </h2>
+          {/* Non-destructive secondary action (HIG: not a filled hero). Exports
+              EVERY attendee (all statuses) regardless of the on-screen filters. */}
+          <button
+            type="button"
+            onClick={() => downloadRosterCsv(attendees)}
+            disabled={attendees.length === 0}
+            className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-ink-soft hover:bg-cream disabled:opacity-40"
+          >
+            CSVダウンロード
+          </button>
+        </div>
         {activeAll.length > 0 && (
           <p className="text-[12px] text-ink-soft">
             楽しみ：{expCounts.map((c) => `${c.emoji}${c.n}`).join('　')}

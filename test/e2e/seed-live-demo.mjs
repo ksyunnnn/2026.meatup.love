@@ -83,10 +83,14 @@ await env.withSecurityRulesDisabled(async (ctx) => {
         role: roles[i % roles.length], expectations: [exp[i % 4]],
       })
     }
-    // 特別ユーザーを数名。先頭2名を SR/SSR に。
-    await setDoc(doc(db, 'specials', uids[0]), { bonusPoints: 5, public: true, name: '運営A', edition: '2026' })
-    await setDoc(doc(db, 'specials', uids[1]), { bonusPoints: 8, public: false, name: '隠れ', edition: '2026' })
-    await setDoc(doc(db, 'staff/2026'), { uids: [uids[0]], edition: '2026' })
+    // 特別ユーザー（決定した配点を反映）：SR 4人×+3（公表・光る）／SSR 4人×+4（非公表）。
+    for (let s = 0; s < 4; s++) {
+      await setDoc(doc(db, 'specials', uids[s]), { bonusPoints: 3, public: true, name: `SR運営${s + 1}`, edition: '2026' })
+    }
+    for (let s = 4; s < 8; s++) {
+      await setDoc(doc(db, 'specials', uids[s]), { bonusPoints: 4, public: false, name: `隠れ${s - 3}`, edition: '2026' })
+    }
+    await setDoc(doc(db, 'staff/2026'), { uids: [uids[0], uids[1], uids[2], uids[3]], edition: '2026' })
     // 繋がり: 各人が直後の数名と繋がる網（重複はIDで自然に排除）。
     let t = 0
     const made = new Set()

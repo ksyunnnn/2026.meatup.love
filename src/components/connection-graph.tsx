@@ -147,6 +147,39 @@ export default function ConnectionGraph({
 
     const radiusOf = (n: Node) => 3.6 + Math.min(n.deg, 9) * 0.95
 
+    // HUD keep-out (issue: with the crowd spread out it would slide under the
+    // corner overlays). Soft-push any node out of the reserved rectangles —
+    // top-right ポイントランキング and top-left イベントロゴ — toward whichever
+    // allowed exit is nearest. Off-screen exits are disabled so a node touching
+    // the top edge is pushed DOWN/INWARD, never up and out of view. Rects are in
+    // the fixed 1600×900 stage space and mirror the /live overlay geometry.
+    const keepOut = (p: Node) => {
+      const m = 22 // margin so nodes settle clear of, not flush against, the panel
+      type Rect = { x0: number; y0: number; x1: number; y1: number; left: boolean; right: boolean; down: boolean }
+      const rects: Rect[] = [
+        // ポイントランキング（右上・w380@right-24 ＋ 見出し行）→ 左か下へ逃がす
+        { x0: W - 450, y0: 0, x1: W, y1: 360, left: true, right: false, down: true },
+        // イベントロゴ（左上）→ 右か下へ逃がす
+        { x0: 0, y0: 0, x1: 350, y1: 140, left: false, right: true, down: true },
+      ]
+      for (const r of rects) {
+        if (p.x <= r.x0 - m || p.x >= r.x1 + m || p.y <= r.y0 - m || p.y >= r.y1 + m) continue
+        // shallowest allowed exit wins (least disruptive nudge)
+        let bestPen = Infinity
+        let ax: 'x' | 'y' = 'x'
+        let dir = 1
+        const consider = (pen: number, a: 'x' | 'y', d: number) => {
+          if (pen < bestPen) { bestPen = pen; ax = a; dir = d }
+        }
+        if (r.left) consider(p.x - (r.x0 - m), 'x', -1)
+        if (r.right) consider((r.x1 + m) - p.x, 'x', 1)
+        if (r.down) consider((r.y1 + m) - p.y, 'y', 1)
+        const f = bestPen * 0.05
+        if (ax === 'x') p.vx += dir * f
+        else p.vy += dir * f
+      }
+    }
+
     const step = () => {
       if (stopped) return
       tick++
@@ -163,9 +196,11 @@ export default function ConnectionGraph({
           const d = Math.sqrt(d2)
           // Polydisperse repulsion: a node with more personal space (rho) pushes
           // harder and from farther, so the packing is irregular, not a lattice.
-          const range = 210 * ((p.rho + q.rho) / 2)
+          // Range/strength are tuned so a full room (~60) spreads across the wide
+          // 1600×900 projector stage instead of collapsing into a central ball.
+          const range = 440 * ((p.rho + q.rho) / 2)
           if (d < range) {
-            const f = (620 * p.rho * q.rho) / d2
+            const f = (1500 * p.rho * q.rho) / d2
             const fx = (dx / d) * f
             const fy = (dy / d) * f
             p.vx += fx
@@ -174,8 +209,13 @@ export default function ConnectionGraph({
             q.vy -= fy
           }
         }
-        p.vx += (W / 2 - p.x) * 0.0012
-        p.vy += (H / 2 - p.y) * 0.0012
+        // Elliptical centering biased to the wide 16:9 stage: a weak HORIZONTAL
+        // pull lets the stronger repulsion fan the crowd nearly full-width for
+        // projector impact, while a firmer vertical pull keeps it off the top/
+        // bottom. Target nudged down so the top-right ranking keep-out fills the
+        // lower-right instead of leaving it empty.
+        p.vx += (W * 0.5 - p.x) * 0.00042
+        p.vy += (H * 0.54 - p.y) * 0.0012
       }
       // springs
       for (const e of eArr) {
@@ -184,7 +224,7 @@ export default function ConnectionGraph({
         const dx = B.x - A.x
         const dy = B.y - A.y
         const d = Math.sqrt(dx * dx + dy * dy) + 0.01
-        const f = (d - 82) * 0.011
+        const f = (d - 135) * 0.011
         const fx = (dx / d) * f
         const fy = (dy / d) * f
         A.vx += fx
@@ -194,6 +234,7 @@ export default function ConnectionGraph({
         if (e.t < 1) e.t += 0.04
       }
       for (const p of list) {
+        keepOut(p) // push clear of the corner overlays before integrating
         p.vx *= 0.86
         p.vy *= 0.86
         p.x += p.vx * 0.5

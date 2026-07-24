@@ -54,11 +54,13 @@ export default function ControlPage() {
   const game = control?.game ?? 'open'
   const ranking = control?.ranking ?? 'shown'
   const reveal = control?.reveal ?? 0
+  const replay = control?.replay ?? 0
   const open = game === 'open'
   const revealing = reveal > 0
   // Where the host is right now. Only one step is "いま", so the screen answers
-  // "what do I press next?" without reading every row.
-  const current = open ? (ranking === 'mosaic' ? 2 : 1) : 4
+  // "what do I press next?" without reading every row. After closing: replay (4),
+  // then results (5) once the podium is up.
+  const current = open ? (ranking === 'mosaic' ? 2 : 1) : revealing ? 5 : 4
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[420px] flex-col gap-3 px-4 py-7">
@@ -153,7 +155,23 @@ export default function ControlPage() {
         )}
       </Step>
 
-      <Step n={4} title="結果発表" state={open ? 'idle' : current === 4 ? 'now' : 'idle'}>
+      <Step n={4} title="つながりリプレイ" state={open ? 'idle' : current === 4 ? 'now' : 'done'}>
+        <p className={subCls}>
+          {open
+            ? '締めたあと、当日のつながりを最初から会場スクリーンで再生できます。'
+            : '繋がった順に、全つながりを再生します（実際の時刻つき・〜20秒）。'}
+        </p>
+        <button
+          className="min-h-11 w-full rounded-xl px-4 text-[13.5px] font-extrabold text-white disabled:opacity-40"
+          style={{ background: '#ff6500' }}
+          disabled={busy !== null || open}
+          onClick={() => run('replay', () => patchControl({ replay: replay + 1 }))}
+        >
+          {busy === 'replay' ? '再生を送信中…' : replay > 0 ? '▶ もう一度リプレイ' : '▶ リプレイを再生'}
+        </button>
+      </Step>
+
+      <Step n={5} title="結果発表" state={open ? 'idle' : current === 5 ? 'now' : 'idle'}>
         <p className={subCls}>
           {open
             ? '「締める」で順位を確定してから発表できます。'

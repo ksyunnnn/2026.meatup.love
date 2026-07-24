@@ -8,11 +8,13 @@
 //    それは許容した設計（理由は firestore.rules の specials ブロック）。
 //  - フェイルセーフ（L/R・ローカル操作）は admin のときだけ。ランキング表示/非表示は
 //    誰でも（自分の画面だけ・モザイクは解除できない）。
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { useAdmin } from '@/lib/use-admin'
 import { useGameState } from '@/lib/use-game-state'
 import { subscribeNewConnections } from '@/lib/connections'
+import { finalScoreFrom, rankFrom, type Edge } from '@/lib/game'
+import type { Connection } from '@/lib/types'
 import ConnectionGraph from '@/components/connection-graph'
 import { Loading } from '@/components/load-state'
 
@@ -20,6 +22,19 @@ interface GreetToast {
   id: number
   a: string
   b: string
+}
+
+// The whole connection replay plays over this fixed span (host-triggered from
+// /control). Length barely affects how it's remembered (peak-end / duration
+// neglect) — the completed graph + final ranking are simply held afterwards.
+const REPLAY_MS = 32000
+
+// HH:MM of a Firestore Timestamp, for the replay timecode. Guarded because a
+// just-written edge can briefly carry a null serverTimestamp.
+function hhmm(ts: Connection['createdAt'] | null | undefined): string {
+  const d = ts?.toDate?.()
+  if (!d) return ''
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
 }
 
 const STAGE_W = 1600
@@ -60,7 +75,7 @@ function fsSupportedSnapshot() {
 
 export default function LivePage() {
   const { user, admin, checked } = useAdmin() // 閲覧はログインだけ必須（admin不要）。直操作の可否は admin
-  const { edges, shares, control, ranking, results, staff } = useGameState()
+  const { edges, shares, control, ranking, results, staff, specials, ready } = useGameState()
   const [ovRanking, setOvRanking] = useState<'shown' | 'mosaic' | null>(null)
   const [showRanking, setShowRanking] = useState(true)
   const [barVisible, setBarVisible] = useState(true) // [TAP-TOGGLE trial] 画面タップで操作バーを出し入れ
@@ -83,6 +98,47 @@ export default function LivePage() {
   useEffect(() => {
     nameOfRef.current = new Map(shares.map((s) => [s.uid, s.name]))
   }, [shares])
+
+  // つながりリプレイ: host bumps control.replay → the graph rebuilds from empty in
+  // createdAt order and the ranking re-scores each step. `replayShown` = how many
+  // edges are revealed (null = not replaying). Edges sorted in a ref so the loop
+  // reads them without re-subscribing.
+  const sorted = useMemo(
+    () => [...edges].sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0)),
+    [edges],
+  )
+  const sortedRef = useRef(sorted) // for the rAF loop (effect reads refs, render reads `sorted`)
+  useEffect(() => {
+    sortedRef.current = sorted
+  }, [sorted])
+  const replayNonce = control?.replay ?? 0
+  const [replayShown, setReplayShown] = useState<number | null>(null)
+  useEffect(() => {
+    if (replayNonce <= 0) return
+    const total = sortedRef.current.length
+    if (total === 0) return
+    // rAF loop — setState only in the callback (not the effect body), so this
+    // stays clear of react-hooks/set-state-in-effect.
+    let raf = 0
+    let start = 0
+    const tick = (t: number) => {
+      if (!start) start = t
+      const p = Math.min(1, (t - start) / REPLAY_MS)
+      setReplayShown(Math.max(1, Math.round(p * total)))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [replayNonce, ready])
+
+  // If the host reopens the game after a replay ("開催に戻す"), drop the finished
+  // replay so /live returns to true live mode and new connections show again —
+  // every /control step is reversible. This is React's "adjust state during
+  // render" pattern (not an effect), so it doesn't trip set-state-in-effect and
+  // it applies before paint (no frozen frame). Guarded, so it can't loop.
+  if (control?.game === 'open' && replayShown !== null) {
+    setReplayShown(null)
+  }
 
   // Scale the fixed stage to fit the viewport (letterbox) — identical layout
   // everywhere. Kept in React state (not an imperative ref) so it's applied
@@ -171,9 +227,23 @@ export default function LivePage() {
 
   const rankingMode = ovRanking ?? (control?.ranking === 'mosaic' ? 'mosaic' : 'shown')
   const nameOf = new Map(shares.map((s) => [s.uid, s.name]))
-  const top3 = new Set(ranking.slice(0, 3).map((r) => r.uid))
   const podium = results ?? []
-  const total = edges.length
+
+  // Replay-aware views: during a replay everything reflects only the edges
+  // revealed so far, so the graph, the ranking and the counter all rewind and
+  // rebuild in step. Held on the finished state once complete.
+  const replayTotal = sorted.length
+  const replayActive = replayShown !== null
+  const replaying = replayActive && (replayShown as number) < replayTotal // still building
+  const shownEdges = replayActive ? sorted.slice(0, replayShown as number) : edges
+  const bonus = new Map([...specials].map(([uid, s]) => [uid, s.bonusPoints]))
+  const activeRanking = replayActive ? rankFrom(finalScoreFrom(shownEdges as Edge[], bonus)) : ranking
+  const top3 = new Set(activeRanking.slice(0, 3).map((r) => r.uid))
+  const total = replayActive ? (replayShown as number) : edges.length
+  const replayTime =
+    replayActive && (replayShown as number) > 0
+      ? hhmm(sorted[(replayShown as number) - 1]?.createdAt)
+      : ''
 
   return (
     <main
@@ -193,9 +263,12 @@ export default function LivePage() {
         }}
       >
         <div className="absolute inset-0">
+          {/* Remount for a replay so the graph starts empty and rebuilds; back to
+              the live instance ('live') otherwise. */}
           <ConnectionGraph
+            key={replayActive ? `replay-${replayNonce}` : 'live'}
             nodes={shares.map((s) => ({ uid: s.uid, name: s.name }))}
-            edges={edges}
+            edges={shownEdges}
             staff={staff}
             top3={top3}
           />
@@ -219,20 +292,9 @@ export default function LivePage() {
               🏆 ポイントランキング
             </h3>
             <div className="relative">
-              <ol className="flex flex-col gap-2" style={rankingMode === 'mosaic' ? { filter: 'blur(9px)', opacity: 0.85 } : undefined}>
-                {ranking.slice(0, 8).map((r, i) => (
-                  <li key={r.uid} className="grid grid-cols-[26px_1fr_auto] items-center gap-3 text-[19px]" style={{ color: '#f3e7db' }}>
-                    <span className="text-center text-[15px] font-bold" style={{ color: i === 0 ? '#f4a047' : '#c99' }}>
-                      {i + 1}
-                    </span>
-                    <span className="truncate">{nameOf.get(r.uid) ?? '—'}</span>
-                    <span className="font-extrabold tabular-nums" style={{ color: i === 0 ? '#f4a047' : '#fff' }}>
-                      {r.score}
-                    </span>
-                  </li>
-                ))}
-                {ranking.length === 0 && <li className="text-[17px]" style={{ color: '#c9b3a5' }}>まだつながりがありません</li>}
-              </ol>
+              <div style={rankingMode === 'mosaic' ? { filter: 'blur(9px)', opacity: 0.85 } : undefined}>
+                <RankingBoard list={activeRanking} nameOf={nameOf} />
+              </div>
               {rankingMode === 'mosaic' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-[34px]">🙈</span>
@@ -245,8 +307,8 @@ export default function LivePage() {
 
         {/* つながり速報 — Sonner-style stack, bottom-left, sitting above the
             counter. Newest at the bottom (front); older ones scale/fade behind,
-            with the rest collapsed into a "+N件" badge. */}
-        {toasts.length > 0 && (
+            with the rest collapsed into a "+N件" badge. Hidden during a replay. */}
+        {!replayActive && toasts.length > 0 && (
           <div className="absolute left-7" style={{ bottom: 84, width: 360, zIndex: 15 }}>
             {toasts.length > 3 && (
               <div className="absolute left-1 text-[15px] font-extrabold" style={{ bottom: 108, color: '#b49b8c' }}>
@@ -293,6 +355,21 @@ export default function LivePage() {
           累計つながり <b className="text-[22px] text-white tabular-nums">{total}</b> 本 ・ 参加{' '}
           <b className="text-[22px] text-white tabular-nums">{shares.length}</b> 人
         </div>
+
+        {/* REPLAY indicator + the real time of the connection currently lighting
+            up. Only while the replay is still building; it clears on completion,
+            leaving the finished graph + final ranking held. */}
+        {replaying && (
+          <div className="absolute bottom-6 right-7 text-right">
+            <div className="flex items-center justify-end gap-2 text-[13px] font-black tracking-[0.16em]" style={{ color: '#f4a047' }}>
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#ff3b3b', boxShadow: '0 0 10px #ff3b3b', animation: 'recblink 1s steps(2,end) infinite' }} />
+              REPLAY
+            </div>
+            <div className="text-[34px] font-extrabold tabular-nums leading-none" style={{ color: '#f6e6d8' }}>
+              {replayTime}
+            </div>
+          </div>
+        )}
 
         {resultsOn && (
           <div
@@ -364,8 +441,42 @@ export default function LivePage() {
         )}
       </div>
 
-      <style>{`@keyframes growbar{from{transform:scaleY(0)}to{transform:scaleY(1)}}@keyframes toastin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <style>{`@keyframes growbar{from{transform:scaleY(0)}to{transform:scaleY(1)}}@keyframes toastin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes recblink{50%{opacity:.2}}`}</style>
     </main>
+  )
+}
+
+// Ranking rows keyed by uid and positioned by rank via translateY, so a rank
+// change slides the row instead of snapping — the standing visibly reshuffles
+// as connections land (live) and as the replay rebuilds the evening.
+const RANK_ROW_H = 30 // px, in the fixed 1600×900 stage space
+function RankingBoard({ list, nameOf }: { list: { uid: string; score: number }[]; nameOf: Map<string, string> }) {
+  const top = list.slice(0, 8)
+  if (top.length === 0) return <p className="text-[17px]" style={{ color: '#c9b3a5' }}>まだつながりがありません</p>
+  return (
+    <div className="relative" style={{ height: top.length * RANK_ROW_H }}>
+      {top.map((r, i) => (
+        <div
+          key={r.uid}
+          className="absolute inset-x-0 grid grid-cols-[26px_1fr_auto] items-center gap-3 text-[19px]"
+          style={{
+            top: 0,
+            height: RANK_ROW_H,
+            transform: `translateY(${i * RANK_ROW_H}px)`,
+            transition: 'transform .5s cubic-bezier(.2,1,.3,1)',
+            color: '#f3e7db',
+          }}
+        >
+          <span className="text-center text-[15px] font-bold" style={{ color: i === 0 ? '#f4a047' : '#c99' }}>
+            {i + 1}
+          </span>
+          <span className="truncate">{nameOf.get(r.uid) ?? '—'}</span>
+          <span className="font-extrabold tabular-nums" style={{ color: i === 0 ? '#f4a047' : '#fff' }}>
+            {r.score}
+          </span>
+        </div>
+      ))}
+    </div>
   )
 }
 

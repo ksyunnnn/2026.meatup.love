@@ -61,6 +61,7 @@ export interface GameControl {
   game: 'open' | 'closed' // closed freezes scanning and the ranking
   ranking: 'shown' | 'mosaic' // mosaic hides the standings while the graph grows
   reveal: number // bump this to (re)play the results animation on the projector
+  replay?: number // bump this to (re)play the connection-forming replay (VTR)
   edition: string
   updatedAt: Timestamp
 }

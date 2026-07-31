@@ -43,7 +43,9 @@
 6. 状態で出し分け（pending/approved で「最重要＝最も目立つ」が変わる）。
 
 ## ドキュメント
-- `docs/STATUS.md` 本番の現状・引き継ぎ / `DEPLOY.md` 再デプロイ・再構築 runbook
+- **残タスク・進捗の正本＝ GitHub issue**（`gh issue list`）。docs には未完了タスクを書かない。
+  完了時は commit メッセージに `Closes #N` を書いて push で自動クローズさせる。
+- `docs/STATUS.md` 本番の現状・引き継ぎ（作業ログ。残タスクは持たない） / `DEPLOY.md` 再デプロイ・再構築 runbook
 - `docs/SPEC.md` 仕様ロードマップ / `DESIGN.md` 意匠・OGP設計（出典付き） / `PRINCIPLES.md` 内部品質原則の固定
 - `docs/GAME.md` 会場交流ゲーム Meat & Greet の実装仕様（採点規則・データモデル・当日の運営手順）
 - ※ 毎セッションには読み込まない（必要時に参照）
